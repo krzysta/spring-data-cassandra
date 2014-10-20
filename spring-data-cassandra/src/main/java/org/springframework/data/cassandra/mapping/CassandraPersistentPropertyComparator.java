@@ -15,7 +15,6 @@
  */
 package org.springframework.data.cassandra.mapping;
 
-import java.lang.reflect.Field;
 import java.util.Comparator;
 
 /**
@@ -50,53 +49,24 @@ public enum CassandraPersistentPropertyComparator implements Comparator<Cassandr
 			return 0;
 		}
 
-		boolean leftIsCompositePrimaryKey = left.isCompositePrimaryKey();
-		boolean rightIsCompositePrimaryKey = right.isCompositePrimaryKey();
-
-		if (leftIsCompositePrimaryKey && rightIsCompositePrimaryKey) {
-			return 0;
-		}
-
 		boolean leftIsPrimaryKey = left.isPrimaryKeyColumn();
 		boolean rightIsPrimaryKey = right.isPrimaryKeyColumn();
 
-		Field leftField = left.getField();
-		Field rightField = right.getField();
-
 		if (leftIsPrimaryKey && rightIsPrimaryKey) {
-			return CassandraPrimaryKeyColumnAnnotationComparator.IT.compare(leftField.getAnnotation(PrimaryKeyColumn.class),
-					rightField.getAnnotation(PrimaryKeyColumn.class));
+			return CassandraPrimaryKeyColumnAnnotationComparator.IT.compare(left.findAnnotation(PrimaryKeyColumn.class),
+					right.findAnnotation(PrimaryKeyColumn.class));
 		}
 
-		boolean leftIsKey = leftIsCompositePrimaryKey || leftIsPrimaryKey;
-		boolean rightIsKey = rightIsCompositePrimaryKey || rightIsPrimaryKey;
-
-		if (leftIsKey && !rightIsKey) {
+		if (leftIsPrimaryKey && !rightIsPrimaryKey) {
 			return -1;
 		}
 
-		if (!leftIsKey && rightIsKey) {
+		if (!leftIsPrimaryKey && rightIsPrimaryKey) {
 			return 1;
 		}
 
 		// else, neither property is a composite primary key nor a primary key; compare @Column annotations
 
-		Column leftColumn = leftField.getAnnotation(Column.class);
-		Column rightColumn = rightField.getAnnotation(Column.class);
-
-		if (leftColumn == null && rightColumn == null) {
-			return leftField.getName().compareTo(rightField.getName());
-		}
-
-		if (leftColumn != null && rightColumn != null) {
-			return CassandraColumnAnnotationComparator.IT.compare(leftColumn, rightColumn);
-		}
-
-		if (leftColumn != null && rightColumn == null) {
-			return leftColumn.value().compareTo(rightField.getName());
-		}
-
-		// else leftColumn == null && rightColumn != null)
-		return leftField.getName().compareTo(rightColumn.value());
+		return left.getName().compareTo(right.getName());
 	}
 }
