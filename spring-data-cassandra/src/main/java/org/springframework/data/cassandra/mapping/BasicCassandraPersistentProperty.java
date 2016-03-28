@@ -33,6 +33,7 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.expression.BeanFactoryAccessor;
 import org.springframework.context.expression.BeanFactoryResolver;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
+import org.springframework.data.annotation.Id;
 import org.springframework.data.cassandra.util.SpelUtils;
 import org.springframework.data.mapping.Association;
 import org.springframework.data.mapping.PropertyHandler;
@@ -106,7 +107,7 @@ public class BasicCassandraPersistentProperty extends AnnotationBasedPersistentP
 
 	@Override
 	public boolean isCompositePrimaryKey() {
-		return getType().isAnnotationPresent(PrimaryKeyClass.class) && findAnnotation(PrimaryKey.class) != null;
+		return getType().isAnnotationPresent(PrimaryKeyClass.class) && (findAnnotation(PrimaryKey.class) != null || findAnnotation(Id.class) != null);
 	}
 
 	public Class<?> getCompositePrimaryKeyType() {

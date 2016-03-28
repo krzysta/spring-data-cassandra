@@ -29,6 +29,8 @@
 	<!-- TODO: not require that these beans be defined -->
 	<cass:mapping />
 	<cass:converter />
+	
+	<bean id="conversionService" class="org.springframework.context.support.ConversionServiceFactoryBean"/>
 
 	<cass:session keyspace-name="${cassandra.keyspace}"
 		schema-action="NONE" />

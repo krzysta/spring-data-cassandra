@@ -16,6 +16,7 @@
 package org.springframework.data.cassandra.config.java;
 
 import org.springframework.beans.factory.BeanClassLoaderAware;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cassandra.config.java.AbstractClusterConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -31,6 +32,7 @@ import org.springframework.data.cassandra.core.CassandraAdminTemplate;
 import org.springframework.data.cassandra.mapping.CassandraMappingContext;
 import org.springframework.data.cassandra.mapping.BasicCassandraMappingContext;
 import org.springframework.data.cassandra.mapping.Table;
+import org.springframework.data.cassandra.test.integration.repository.ConversionServiceFactoryBean;
 import org.springframework.data.mapping.context.MappingContext;
 
 /**
@@ -107,12 +109,15 @@ public abstract class AbstractCassandraConfiguration extends AbstractClusterConf
 	 */
 	@Bean
 	public CassandraConverter cassandraConverter() throws Exception {
-		return new MappingCassandraConverter(conversionService(), cassandraMapping());
+		return new MappingCassandraConverter(conversionService, cassandraMapping());
 	}
+	
+	@Autowired
+	ConversionService conversionService;
 
 	@Bean
-	public ConversionService conversionService() {
-        return new DefaultConversionService();
+	public ConversionServiceFactoryBean conversionServiceFB() {
+        return new ConversionServiceFactoryBean();
     }
 
     @Override

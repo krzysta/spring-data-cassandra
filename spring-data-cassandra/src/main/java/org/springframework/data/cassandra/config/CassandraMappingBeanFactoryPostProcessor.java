@@ -130,7 +130,7 @@ public class CassandraMappingBeanFactoryPostProcessor implements BeanDefinitionR
 		}
 
 		// create the default converter & template bean definitions
-		BeanDefinitionHolder converter = registerDefaultConverter(registry, contextBean.getBeanName());
+		BeanDefinitionHolder converter = registerDefaultConverter(registry, contextBean.getBeanName(), "conversionService");
 		registerDefaultTemplate(registry, sessionBeanName, converter.getBeanName());
 	}
 
@@ -173,10 +173,10 @@ public class CassandraMappingBeanFactoryPostProcessor implements BeanDefinitionR
 		return contextBean;
 	}
 
-	public BeanDefinitionHolder registerDefaultConverter(BeanDefinitionRegistry registry, String contextBeanName) {
+	public BeanDefinitionHolder registerDefaultConverter(BeanDefinitionRegistry registry, String contextBeanName, String cnvServiceBeanName) {
 
 		BeanDefinitionBuilder converterBeanDefinitionBuilder = BeanDefinitionBuilder.genericBeanDefinition(
-				MappingCassandraConverter.class).addConstructorArgReference(contextBeanName);
+				MappingCassandraConverter.class).addConstructorArgReference(cnvServiceBeanName).addConstructorArgReference(contextBeanName);
 		BeanDefinitionHolder beanDefinition = new BeanDefinitionHolder(converterBeanDefinitionBuilder.getBeanDefinition(),
 				DefaultBeanNames.CONVERTER);
 

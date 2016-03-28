@@ -16,6 +16,8 @@
 
 	<cass:converter mapping-ref="cassandraMapping"/>
 
+	<bean id="conversionService" class="org.springframework.data.cassandra.test.integration.repository.ConversionServiceFactoryBean"/>
+
 	<cass:template />
 
 </beans>

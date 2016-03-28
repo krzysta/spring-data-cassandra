@@ -42,18 +42,22 @@ public class CassandraConvertingPropertyAccessor extends ConvertingPropertyAcces
         if (property instanceof CassandraPersistentProperty) {
             Object value = super.getProperty(property);
             CassandraPersistentProperty cpp = (CassandraPersistentProperty) property;
-            DataType dt = cpp.getDataType();
-
-            List<DataType> typeArgs = dt.getTypeArguments();
-
-            if ((dt.getName() == Name.LIST || dt.getName() == Name.SET) && value instanceof Collection) {
-                return convert(convertCol((Collection) value, typeArgs.get(0).asJavaClass()), dt);
-            } else if ((dt.getName() == Name.MAP) && value instanceof Map) {
-                return convert(
-                        convertMap((Map) value, typeArgs.get(0).asJavaClass(), typeArgs.get(1).asJavaClass()),
-                        dt);
+            if (cpp.isCompositePrimaryKey()) {
+                return (T) convert(value, cpp.getType());
             } else {
-                return convert(value, dt);
+                DataType dt = cpp.getDataType();
+
+                List<DataType> typeArgs = dt.getTypeArguments();
+        
+                if ((dt.getName() == Name.LIST || dt.getName() == Name.SET) && value instanceof Collection) {
+                    return convert(convertCol((Collection) value, typeArgs.get(0).asJavaClass()), dt);
+                } else if ((dt.getName() == Name.MAP) && value instanceof Map) {
+                    return convert(
+                            convertMap((Map) value, typeArgs.get(0).asJavaClass(), typeArgs.get(1).asJavaClass()),
+                            dt);
+                } else {
+                    return convert(value, dt);
+                }
             }
         } else {
             return super.getProperty(property, targetType);
@@ -83,18 +87,22 @@ public class CassandraConvertingPropertyAccessor extends ConvertingPropertyAcces
         if (property instanceof CassandraPersistentProperty) {
 
             CassandraPersistentProperty cpp = (CassandraPersistentProperty) property;
-            DataType dt = cpp.getDataType();
-
-            List<DataType> typeArgs = dt.getTypeArguments();
-
-            if ((dt.getName() == Name.LIST || dt.getName() == Name.SET) && value instanceof Collection) {
-                super.setProperty(property, convertCol((Collection) value, cpp.getComponentType()));
-            } else if ((dt.getName() == Name.MAP) && value instanceof Map) {
-                super.setProperty(
-                        property,
-                        convertMap((Map) value, cpp.getComponentType(), cpp.getMapValueType()));
-            } else {
+            if (cpp.isCompositePrimaryKey()) {
                 super.setProperty(property, value);
+            } else {
+                DataType dt = cpp.getDataType();
+    
+                List<DataType> typeArgs = dt.getTypeArguments();
+    
+                if ((dt.getName() == Name.LIST || dt.getName() == Name.SET) && value instanceof Collection) {
+                    super.setProperty(property, convertCol((Collection) value, cpp.getComponentType()));
+                } else if ((dt.getName() == Name.MAP) && value instanceof Map) {
+                    super.setProperty(
+                            property,
+                            convertMap((Map) value, cpp.getComponentType(), cpp.getMapValueType()));
+                } else {
+                    super.setProperty(property, value);
+                }
             }
         } else {
             super.setProperty(property, value);

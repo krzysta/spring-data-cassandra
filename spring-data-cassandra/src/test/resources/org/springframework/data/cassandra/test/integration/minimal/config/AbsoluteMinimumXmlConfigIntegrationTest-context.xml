@@ -16,6 +16,8 @@
 	<cass:cluster port="${cassandra.native_transport_port}" />
 
 	<cass:session keyspace-name="system" />
+	
+	<bean id="conversionService" class="org.springframework.context.support.ConversionServiceFactoryBean"/>
 
 	<cass:repositories
 		base-package="org.springframework.data.cassandra.test.integration.minimal.config" />
