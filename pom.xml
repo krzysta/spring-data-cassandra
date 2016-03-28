@@ -5,7 +5,7 @@
 
 	<groupId>org.springframework.data</groupId>
 	<artifactId>spring-data-cassandra-parent</artifactId>
-	<version>1.3.1.OT.BUILD-SNAPSHOT</version>
+	<version>1.4.0.OT.BUILD-SNAPSHOT</version>
 	<packaging>pom</packaging>
 
 	<name>Spring Data Cassandra</name>
@@ -15,7 +15,7 @@
 	<parent>
 		<groupId>org.springframework.data.build</groupId>
 		<artifactId>spring-data-parent</artifactId>
-		<version>1.7.0.RC1</version>
+		<version>1.8.0.BUILD-SNAPSHOT</version>
 		<relativePath>../spring-data-build/parent/pom.xml</relativePath>
 	</parent>
 
@@ -35,14 +35,20 @@
 	<properties>
 		<project.type>multi</project.type>
 		<dist.id>spring-data-cassandra</dist.id>
-		<springdata.commons>1.10.1.OT.RELEASE</springdata.commons>
-		<cassandra-unit.version>2.0.2.2</cassandra-unit.version>
-		<cassandra-driver-dse>2.1.4</cassandra-driver-dse>
+		<springdata.commons>1.12.0.OT.BUILD-SNAPSHOT</springdata.commons>		
+		<cassandra-unit.version>2.1.9.2</cassandra-unit.version>
+		<cassandra-driver-dse.version>2.1.7.1</cassandra-driver-dse.version>
 		<el.version>1.0</el.version>
 		<failsafe.version>2.16</failsafe.version>
-		<jamm.version>0.2.5</jamm.version>
-		<cassandra>2.1.2</cassandra>
-		<guava>16.0.1</guava>
+		<jamm.version>0.3.1</jamm.version>
+		<cassandra.version>2.1.11</cassandra.version>
+		
+
+		<build.cassandra.native_transport_port>9042</build.cassandra.native_transport_port>
+		<build.cassandra.rpc_port>9043</build.cassandra.rpc_port>
+		<build.cassandra.storage_port>9044</build.cassandra.storage_port>
+		<build.cassandra.ssl_storage_port>9045</build.cassandra.ssl_storage_port>
+
 		<release.maven.plugin.version>2.5.1</release.maven.plugin.version>
 	</properties>
 
@@ -88,7 +94,7 @@
 			<dependency>
 				<groupId>com.datastax.cassandra</groupId>
 				<artifactId>cassandra-driver-dse</artifactId>
-				<version>${cassandra-driver-dse}</version>
+				<version>${cassandra-driver-dse.version}</version>
 				<exclusions>
 					<exclusion>
 						<artifactId>slf4j-log4j12</artifactId>
@@ -102,23 +108,20 @@
 						<artifactId>guava</artifactId>
 						<groupId>com.google.guava</groupId>
 					</exclusion>
+					<exclusion>
+						<artifactId>netty-handler</artifactId>
+						<groupId>io.netty</groupId>
+					</exclusion>
 				</exclusions>
 			</dependency>
 			<dependency>
-				<groupId>com.github.stephenc</groupId>
+				<groupId>com.github.jbellis</groupId>
 				<artifactId>jamm</artifactId>
 				<version>${jamm.version}</version>
 				<scope>test</scope>
 			</dependency>
 
 			<!-- Logging Dependencies -->
-			<dependency>
-				<groupId>org.slf4j</groupId>
-				<artifactId>log4j-over-slf4j</artifactId>
-				<version>${slf4j}</version>
-				<scope>test</scope>
-			</dependency>
-
 			<dependency>
 				<groupId>org.slf4j</groupId>
 				<artifactId>jul-to-slf4j</artifactId>
@@ -158,9 +161,8 @@
 
 			<dependency>
 				<groupId>org.cassandraunit</groupId>
-				<artifactId>cassandra-unit</artifactId>
+				<artifactId>cassandra-unit-spring</artifactId>
 				<version>${cassandra-unit.version}</version>
-				<scope>test</scope>
 				<exclusions>
 					<exclusion>
 						<artifactId>cassandra-all</artifactId>
@@ -170,13 +172,11 @@
 						<groupId>com.datastax.cassandra</groupId>
 						<artifactId>cassandra-driver-core</artifactId>
 					</exclusion>
+					<exclusion>
+						<artifactId>slf4j-log4j12</artifactId>
+						<groupId>org.slf4j</groupId>
+					</exclusion>
 				</exclusions>
-			</dependency>
-
-			<dependency>
-				<groupId>org.cassandraunit</groupId>
-				<artifactId>cassandra-unit-spring</artifactId>
-				<version>${cassandra-unit.version}</version>
 				<scope>test</scope>
 			</dependency>
 
@@ -200,6 +200,21 @@
 				<version>${jodatime}</version>
 				<scope>test</scope>
 			</dependency>
+
+			<dependency>
+				<groupId>org.apache.commons</groupId>
+				<artifactId>commons-lang3</artifactId>
+				<version>3.1</version>
+				<scope>test</scope>
+			</dependency>
+
+			<dependency>
+				<groupId>org.hectorclient</groupId>
+				<artifactId>hector-core</artifactId>
+				<version>1.1-4</version>
+				<scope>test</scope>
+			</dependency>
+
 		</dependencies>
 	</dependencyManagement>
 
@@ -223,12 +238,8 @@
 			<artifactId>cassandra-driver-dse</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.github.stephenc</groupId>
+			<groupId>com.github.jbellis</groupId>
 			<artifactId>jamm</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.cassandraunit</groupId>
-			<artifactId>cassandra-unit</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.cassandraunit</groupId>
@@ -252,31 +263,8 @@
 				</executions>
 			</plugin>
 			<plugin>
-				<groupId>org.codehaus.mojo</groupId>
-				<artifactId>build-helper-maven-plugin</artifactId>
-				<version>1.8</version>
-				<executions>
-					<execution>
-						<id>reserve-network-port</id>
-						<goals>
-							<goal>reserve-network-port</goal>
-						</goals>
-						<phase>process-resources</phase>
-						<configuration>
-							<portNames>
-								<portName>build.cassandra.native_transport_port</portName>
-								<portName>build.cassandra.rpc_port</portName>
-								<portName>build.cassandra.storage_port</portName>
-								<portName>build.cassandra.ssl_storage_port</portName>
-							</portNames>
-						</configuration>
-					</execution>
-				</executions>
-			</plugin>
-			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-dependency-plugin</artifactId>
-				<version>2.8</version>
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -303,8 +291,7 @@
 				<version>${failsafe.version}</version>
 				<configuration>
 					<forkCount>1</forkCount>
-					<argLine>-Xmx1024m -Xss512m
-						-javaagent:${com.github.stephenc:jamm:jar}</argLine>
+					<argLine>-Xms1g -Xmx1g -Xss256k -javaagent:${com.github.jbellis:jamm:jar}</argLine>
 					<reuseForks>true</reuseForks>
 					<useFile>false</useFile>
 					<includes>
@@ -356,4 +343,20 @@
 			</testResource>
 		</testResources>
 	</build>
+
+	<profiles>
+		<profile>
+			<id>release</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.jfrog.buildinfo</groupId>
+						<artifactId>artifactory-maven-plugin</artifactId>
+						<inherited>false</inherited>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+
 </project>

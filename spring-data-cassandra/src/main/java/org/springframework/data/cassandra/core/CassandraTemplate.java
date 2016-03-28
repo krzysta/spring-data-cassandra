@@ -22,9 +22,9 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.cassandra.core.AsynchronousQueryListener;
+import org.springframework.cassandra.core.Cancellable;
 import org.springframework.cassandra.core.CqlOperations;
 import org.springframework.cassandra.core.CqlTemplate;
-import org.springframework.cassandra.core.Cancellable;
 import org.springframework.cassandra.core.QueryForObjectListener;
 import org.springframework.cassandra.core.QueryOptions;
 import org.springframework.cassandra.core.SessionCallback;
@@ -50,8 +50,6 @@ import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.ResultSetFuture;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
-import com.datastax.driver.core.SimpleStatement;
-import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.querybuilder.Batch;
 import com.datastax.driver.core.querybuilder.Clause;
 import com.datastax.driver.core.querybuilder.Delete;
@@ -418,8 +416,9 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 		if (idProperty.isCompositePrimaryKey()) {
 
 			CassandraPersistentEntity<?> idEntity = idProperty.getCompositePrimaryKeyEntity();
+			PersistentPropertyAccessor accessor = idEntity.getPropertyAccessor(id);
 
-			final ConvertingPropertyAccessor idWrapper = getWrapper(id, idEntity);
+			final ConvertingPropertyAccessor idAccessor = getWrapper(id, idEntity);
 
 			idEntity.doWithProperties(new PropertyHandler<CassandraPersistentProperty>() {
 
@@ -427,7 +426,7 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 				public void doWithPersistentProperty(CassandraPersistentProperty p) {
 
 					clauseCallback.doWithClause(QueryBuilder.eq(p.getColumnName().toCql(),
-							idWrapper.getProperty(p, p.getDataType().asJavaClass())));
+							idAccessor.getProperty(p, p.getActualType())));
 				}
 			});
 
@@ -1068,8 +1067,8 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 		if (query instanceof Select) {
 			return queryAsynchronously((Select) query, aql);
 		}
-		throw new IllegalArgumentException(String.format("Expected type String or Select; got type [%s] with value [%s]",
-				query.getClass(), query));
+		throw new IllegalArgumentException(
+				String.format("Expected type String or Select; got type [%s] with value [%s]", query.getClass(), query));
 	}
 	
 
