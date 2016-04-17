@@ -44,4 +44,9 @@ public @interface Table {
 	 * Whether to cause the table name to be force-quoted.
 	 */
 	boolean forceQuote() default false;
+
+	/**
+	 * A free-form, human-readable comment describing the table.
+	 */
+	String comment() default "";
 }

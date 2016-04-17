@@ -20,16 +20,12 @@ import static org.springframework.cassandra.core.keyspace.CreateTableSpecificati
 
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.Field;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import org.springframework.beans.BeansException;
 import org.springframework.cassandra.core.cql.CqlIdentifier;
 import org.springframework.cassandra.core.keyspace.CreateTableSpecification;
+import org.springframework.cassandra.core.keyspace.TableOption;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.data.mapping.PropertyHandler;
@@ -161,7 +157,12 @@ public class BasicCassandraMappingContext extends
 
 		Assert.notNull(entity);
 
-		final CreateTableSpecification spec = createTable().name(entity.getTableName());
+		CreateTableSpecification _spec = createTable().name(entity.getTableName());
+		for (TableOption option : entity.getTableOptions().keySet()) {
+			_spec = _spec.with(option, entity.getTableOptions().get(option));
+		}
+
+		final CreateTableSpecification spec = _spec;
 
 		entity.doWithProperties(new PropertyHandler<CassandraPersistentProperty>() {
 
