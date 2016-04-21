@@ -43,6 +43,7 @@ import com.datastax.driver.core.Host;
 import com.datastax.driver.core.LatencyTracker;
 import com.datastax.driver.core.PoolingOptions;
 import com.datastax.driver.core.ProtocolOptions.Compression;
+import com.datastax.driver.core.QueryOptions;
 import com.datastax.driver.core.SSLOptions;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.SocketOptions;
@@ -79,6 +80,7 @@ public class CassandraCqlClusterFactoryBean implements FactoryBean<Cluster>, Ini
 	private CompressionType compressionType;
 	private PoolingOptions poolingOptions;
 	private SocketOptions socketOptions;
+	private QueryOptions queryOptions;
 	private AuthProvider authProvider;
 	private String username;
 	private String password;
@@ -140,6 +142,10 @@ public class CassandraCqlClusterFactoryBean implements FactoryBean<Cluster>, Ini
 
 		if (socketOptions != null) {
 			builder.withSocketOptions(socketOptions);
+		}
+
+		if (queryOptions != null) {
+			builder.withQueryOptions(queryOptions);
 		}
 
 		if (authProvider != null) {
@@ -288,6 +294,10 @@ public class CassandraCqlClusterFactoryBean implements FactoryBean<Cluster>, Ini
 
 	public void setSocketOptions(SocketOptions socketOptions) {
 		this.socketOptions = socketOptions;
+	}
+
+	public void setQueryOptions(QueryOptions queryOptions) {
+		this.queryOptions = queryOptions;
 	}
 
 	public void setAuthProvider(AuthProvider authProvider) {
