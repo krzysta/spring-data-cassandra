@@ -197,6 +197,23 @@ AuthInfoProvider implementation.
 				<xsd:union memberTypes="xsd:string" />
 			</xsd:simpleType>
 		</xsd:attribute>
+		<xsd:attribute name="query-options-ref" use="optional">
+			<xsd:annotation>
+				<xsd:documentation><![CDATA[
+QueryOptions for cluster.
+				]]></xsd:documentation>
+			</xsd:annotation>
+			<xsd:simpleType>
+				<xsd:annotation>
+					<xsd:appinfo>
+						<tool:annotation kind="ref">
+							<tool:assignable-to type="com.datastax.driver.core.QueryOptions" />
+						</tool:annotation>
+					</xsd:appinfo>
+				</xsd:annotation>
+				<xsd:union memberTypes="xsd:string" />
+			</xsd:simpleType>
+		</xsd:attribute>
 		<xsd:attribute name="load-balancing-policy-ref" use="optional">
 			<xsd:annotation>
 				<xsd:documentation><![CDATA[
