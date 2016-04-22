@@ -43,7 +43,7 @@
 		<jamm.version>0.2.5</jamm.version>
 		<cassandra>2.1.2</cassandra>
 		<guava>16.0.1</guava>
-		<release.maven.plugin.version>2.5.1</release.maven.plugin.version>
+		<release.maven.plugin.version>2.5.3</release.maven.plugin.version>
 	</properties>
 
 	<developers>
