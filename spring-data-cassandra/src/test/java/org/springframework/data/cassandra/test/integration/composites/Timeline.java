@@ -17,7 +17,7 @@ package org.springframework.data.cassandra.test.integration.composites;
 
 import java.util.Date;
 
-import org.springframework.data.annotation.Id;
+import org.springframework.data.cassandra.mapping.PrimaryKey;
 import org.springframework.data.cassandra.mapping.Table;
 
 /**
@@ -34,7 +34,7 @@ public class Timeline {
 	/*
 	 * Row ID
 	 */
-	@Id
+	@PrimaryKey
 	private TimelinePK pk;
 
 	/*

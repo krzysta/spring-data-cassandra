@@ -21,16 +21,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.DefaultConversionService;
-import org.springframework.data.cassandra.config.CassandraSessionFactoryBean;
 import org.springframework.data.cassandra.config.CassandraEntityClassScanner;
+import org.springframework.data.cassandra.config.CassandraSessionFactoryBean;
 import org.springframework.data.cassandra.config.SchemaAction;
 import org.springframework.data.cassandra.convert.CassandraConverter;
 import org.springframework.data.cassandra.convert.MappingCassandraConverter;
 import org.springframework.data.cassandra.core.CassandraAdminOperations;
 import org.springframework.data.cassandra.core.CassandraAdminTemplate;
-import org.springframework.data.cassandra.mapping.CassandraMappingContext;
-import org.springframework.data.cassandra.mapping.BasicCassandraMappingContext;
-import org.springframework.data.cassandra.mapping.Table;
+import org.springframework.data.cassandra.mapping.*;
 import org.springframework.data.mapping.context.MappingContext;
 
 /**
@@ -114,6 +112,11 @@ public abstract class AbstractCassandraConfiguration extends AbstractClusterConf
 	public ConversionService conversionService() {
         return new DefaultConversionService();
     }
+
+	@Bean
+	public DiscriminatorConverter<?> stringDiscriminatorConverter(){
+		return new StringDiscriminatorConverter();
+	}
 
     @Override
 	public void setBeanClassLoader(ClassLoader classLoader) {

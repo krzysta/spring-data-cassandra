@@ -76,7 +76,7 @@ public class SimpleCassandraRepository<T, ID extends Serializable> implements Ty
 
 	@Override
 	public long count() {
-		return operations.count(entityInformation.getTableName());
+		return operations.count(entityInformation.getJavaType());
 	}
 
 	@Override
@@ -96,7 +96,7 @@ public class SimpleCassandraRepository<T, ID extends Serializable> implements Ty
 
 	@Override
 	public void deleteAll() {
-		operations.truncate(entityInformation.getTableName());
+		operations.deleteAll(entityInformation.getJavaType());
 	}
 
 	@Override

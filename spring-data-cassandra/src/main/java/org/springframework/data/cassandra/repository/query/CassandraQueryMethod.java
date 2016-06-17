@@ -14,12 +14,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import org.springframework.cassandra.core.cql.CqlIdentifier;
 import org.springframework.cassandra.core.cql.CqlStringUtils;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.data.cassandra.convert.CassandraConverter;
-import org.springframework.data.cassandra.mapping.CassandraMappingContext;
-import org.springframework.data.cassandra.mapping.CassandraType;
+import org.springframework.data.cassandra.mapping.*;
 import org.springframework.data.cassandra.repository.Query;
 import org.springframework.data.repository.core.RepositoryMetadata;
 import org.springframework.data.repository.query.QueryMethod;
@@ -64,6 +64,7 @@ public class CassandraQueryMethod extends QueryMethod {
 	protected boolean queryCached = false;
 	protected Set<Integer> stringLikeParameterIndexes = new HashSet<Integer>();
 	protected Set<Integer> dateParameterIndexes = new HashSet<Integer>();
+	protected Integer discriminatorParameterIndex ;
 
 	public CassandraQueryMethod(Method method, RepositoryMetadata metadata, CassandraMappingContext mappingContext) {
 
@@ -89,13 +90,19 @@ public class CassandraQueryMethod extends QueryMethod {
 		int i = 0;
 		Annotation[][] parameterAnnotations = method.getParameterAnnotations();
 		for (Class<?> type : method.getParameterTypes()) {
-		        CassandraType cnvAnn = findAnnotation(parameterAnnotations[i], CassandraType.class);
-		        if (cnvAnn == null) {
-		            cnvAnn = type.getAnnotation(CassandraType.class);
-		        } 
-                        if (cnvAnn != null) {
-                            type = cnvAnn.type().asJavaClass();
-                        } 
+			TableDiscriminator discriminator = findAnnotation(parameterAnnotations[i], TableDiscriminator.class);
+			if (discriminator!=null){
+				discriminatorParameterIndex = i;
+			}
+
+			CassandraType cnvAnn = findAnnotation(parameterAnnotations[i], CassandraType.class);
+			if (cnvAnn == null) {
+				cnvAnn = type.getAnnotation(CassandraType.class);
+			}
+			if (cnvAnn != null) {
+				type = cnvAnn.type().asJavaClass();
+			}
+
 			if (!ALLOWED_PARAMETER_TYPES.contains(type)) {
 				offendingTypes.add(type);
 			}
@@ -182,6 +189,10 @@ public class CassandraQueryMethod extends QueryMethod {
 		return isQueryForEntity() && isCollectionQuery();
 	}
 
+	public boolean isVoidQuery(){
+		return Void.TYPE.isAssignableFrom(method.getReturnType());
+	}
+
 	public boolean isMapOfCharSequenceToObjectQuery() {
 
 		return isMapOfCharSequenceToObject(getReturnType());
@@ -216,4 +227,14 @@ public class CassandraQueryMethod extends QueryMethod {
                 return value.toString();
         }
     }
+
+	public String resolveTableName(CassandraParameterAccessor accessor){
+		Object bindableValue = null;
+		if (discriminatorParameterIndex != null){
+			bindableValue = accessor.getBindableValue(discriminatorParameterIndex);
+		}
+		CassandraPersistentEntity<?> persistentEntity = mappingContext.getPersistentEntity(getDomainClass());
+		CqlIdentifier tableName = persistentEntity.getEntityDiscriminator().getTableNameForDiscriminator(bindableValue);
+		return tableName.toCql();
+	}
 }

@@ -59,4 +59,7 @@ public interface CassandraPersistentEntity<T> extends MutablePersistentEntity<T,
 	 * Returns {@link TableOption}s and values associated with the entity
 	 */
 	Map<TableOption, Object> getTableOptions();
+
+	EntityDiscriminator<T> getEntityDiscriminator();
+
 }

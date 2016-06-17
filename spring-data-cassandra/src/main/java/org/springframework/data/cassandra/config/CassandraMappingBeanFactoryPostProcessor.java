@@ -25,6 +25,8 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
+import org.springframework.core.convert.ConversionService;
+import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.data.cassandra.convert.CassandraConverter;
 import org.springframework.data.cassandra.convert.MappingCassandraConverter;
 import org.springframework.data.cassandra.core.CassandraOperations;
@@ -129,8 +131,20 @@ public class CassandraMappingBeanFactoryPostProcessor implements BeanDefinitionR
 			contextBean = regsiterDefaultContext(registry);
 		}
 
-		// create the default converter & template bean definitions
-		BeanDefinitionHolder converter = registerDefaultConverter(registry, contextBean.getBeanName());
+		BeanDefinitionHolder[] conversionServices = getBeanDefinitionsOfType(registry, factory, ConversionService.class, true, false);
+		String conversionServiceBeanName;
+		if (conversionServices.length == 0) {
+			conversionServiceBeanName = registerDefaultConversionService(registry).getBeanName();
+		} else if (conversionServices.length==1){
+			conversionServiceBeanName = conversionServices[0].getBeanName();
+		} else {
+			throw new IllegalStateException(String.format(
+					"found %d beans of type [%s] - can't disambiguate for creation of [%s]", conversionServices.length,
+					ConversionService.class.getName(), MappingCassandraConverter.class.getName()));
+		}
+
+//		 create the default converter & template bean definitions
+		BeanDefinitionHolder converter = registerDefaultConverter(registry, conversionServiceBeanName, contextBean.getBeanName());
 		registerDefaultTemplate(registry, sessionBeanName, converter.getBeanName());
 	}
 
@@ -173,12 +187,24 @@ public class CassandraMappingBeanFactoryPostProcessor implements BeanDefinitionR
 		return contextBean;
 	}
 
-	public BeanDefinitionHolder registerDefaultConverter(BeanDefinitionRegistry registry, String contextBeanName) {
+	public BeanDefinitionHolder registerDefaultConverter(BeanDefinitionRegistry registry, String conversionService, String contextBeanName) {
 
 		BeanDefinitionBuilder converterBeanDefinitionBuilder = BeanDefinitionBuilder.genericBeanDefinition(
-				MappingCassandraConverter.class).addConstructorArgReference(contextBeanName);
+				MappingCassandraConverter.class).addConstructorArgReference(conversionService).addConstructorArgReference(contextBeanName);
 		BeanDefinitionHolder beanDefinition = new BeanDefinitionHolder(converterBeanDefinitionBuilder.getBeanDefinition(),
 				DefaultBeanNames.CONVERTER);
+
+		registry.registerBeanDefinition(beanDefinition.getBeanName(), beanDefinition.getBeanDefinition());
+
+		return beanDefinition;
+	}
+
+	public BeanDefinitionHolder registerDefaultConversionService(BeanDefinitionRegistry registry) {
+
+		BeanDefinitionBuilder converterBeanDefinitionBuilder = BeanDefinitionBuilder.genericBeanDefinition(
+				DefaultConversionService.class);
+		BeanDefinitionHolder beanDefinition = new BeanDefinitionHolder(converterBeanDefinitionBuilder.getBeanDefinition(),
+				DefaultBeanNames.CONVERSION_SERVICE);
 
 		registry.registerBeanDefinition(beanDefinition.getBeanName(), beanDefinition.getBeanDefinition());
 

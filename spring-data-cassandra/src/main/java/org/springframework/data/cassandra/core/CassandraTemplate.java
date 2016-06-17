@@ -15,20 +15,9 @@
  */
 package org.springframework.data.cassandra.core;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-import org.springframework.cassandra.core.AsynchronousQueryListener;
-import org.springframework.cassandra.core.CqlOperations;
-import org.springframework.cassandra.core.CqlTemplate;
-import org.springframework.cassandra.core.Cancellable;
-import org.springframework.cassandra.core.QueryForObjectListener;
-import org.springframework.cassandra.core.QueryOptions;
-import org.springframework.cassandra.core.SessionCallback;
-import org.springframework.cassandra.core.WriteOptions;
+import org.springframework.cassandra.core.*;
 import org.springframework.cassandra.core.cql.CqlIdentifier;
 import org.springframework.cassandra.core.util.CollectionUtils;
 import org.springframework.core.convert.ConversionService;
@@ -50,16 +39,11 @@ import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.ResultSetFuture;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
-import com.datastax.driver.core.SimpleStatement;
-import com.datastax.driver.core.Statement;
-import com.datastax.driver.core.querybuilder.Batch;
-import com.datastax.driver.core.querybuilder.Clause;
-import com.datastax.driver.core.querybuilder.Delete;
+import com.datastax.driver.core.querybuilder.*;
 import com.datastax.driver.core.querybuilder.Delete.Where;
-import com.datastax.driver.core.querybuilder.Insert;
-import com.datastax.driver.core.querybuilder.QueryBuilder;
-import com.datastax.driver.core.querybuilder.Select;
-import com.datastax.driver.core.querybuilder.Update;
+import com.google.common.base.Function;
+import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableListMultimap;
 
 /**
  * The CassandraTemplate is a convenient API for all Cassandra operations using POJOs with their Spring Data Cassandra
@@ -123,13 +107,12 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 
 	@Override
 	public boolean exists(Class<?> type, Object id) {
-
 		Assert.notNull(type);
 		Assert.notNull(id);
 
 		CassandraPersistentEntity<?> entity = mappingContext.getPersistentEntity(type);
 
-		Select select = QueryBuilder.select().countAll().from(entity.getTableName().toCql());
+		Select select = QueryBuilder.select().countAll().from(getTableName(type, id).toCql());
 		appendIdCriteria(select.where(), entity, id);
 
 		Long count = queryForObject(select, Long.class);
@@ -139,7 +122,12 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 
 	@Override
 	public long count(Class<?> type) {
-		return count(getTableName(type).toCql());
+		List<CqlIdentifier> tableNames = mappingContext.getPersistentEntity(type).getEntityDiscriminator().getTableNames();
+		long count=0;
+		for (CqlIdentifier tableName : tableNames) {
+			count+=count(tableName.toCql());
+		}
+		return count;
 	}
 
 	@Override
@@ -154,13 +142,12 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 
 	@Override
 	public void deleteById(Class<?> type, Object id) {
-
 		Assert.notNull(type);
 		Assert.notNull(id);
 
 		CassandraPersistentEntity<?> entity = mappingContext.getPersistentEntity(type);
 
-		Delete delete = QueryBuilder.delete().from(entity.getTableName().toCql());
+		Delete delete = QueryBuilder.delete().from(getTableName(type, id).toCql());
 		appendIdCriteria(delete.where(), entity, id);
 
 		execute(delete);
@@ -218,7 +205,11 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 
 	@Override
 	public CqlIdentifier getTableName(Class<?> type) {
-		return mappingContext.getPersistentEntity(type).getTableName();
+		CassandraPersistentEntity<?> entity = mappingContext.getPersistentEntity(type);
+		if (entity.getEntityDiscriminator().isMultitable()){
+			throw new UnsupportedOperationException();
+		}
+		return entity.getTableName();
 	}
 
 	@Override
@@ -312,7 +303,12 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 
 	@Override
 	public <T> List<T> selectAll(Class<T> type) {
-		return select(QueryBuilder.select().all().from(getTableName(type).toCql()), type);
+		List<CqlIdentifier> tableNames = mappingContext.getPersistentEntity(type).getEntityDiscriminator().getTableNames();
+		List<T> result = new ArrayList<T>();
+		for (CqlIdentifier tableName : tableNames) {
+			result.addAll(select(QueryBuilder.select().all().from(tableName.toCql()), type));
+		}
+		return result;
 	}
 
 	@Override
@@ -383,7 +379,7 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 			throw new IllegalArgumentException(String.format("unknown entity class [%s]", type.getName()));
 		}
 
-		Select select = QueryBuilder.select().all().from(entity.getTableName().toCql());
+		Select select = QueryBuilder.select().all().from(getTableName(type, id).toCql());
 		appendIdCriteria(select.where(), entity, id);
 
 		return selectOne(select, type);
@@ -643,8 +639,29 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 	}
 
 	protected <T> void doBatchDelete(List<T> entities, QueryOptions options) {
-		execute(createDeleteBatchQuery(getTableName(entities.get(0).getClass()).toCql(), entities, options,
-				cassandraConverter));
+		if (entities == null || entities.size() == 0) {
+			if (logger.isWarnEnabled()) {
+				logger.warn("no-op due to given null or empty list");
+			}
+			return ;
+		}
+
+		ImmutableListMultimap<String, T> tables = FluentIterable.from(entities).index(new Function<T, String>() {
+			@Override
+			public String apply(T input) {
+				return getTableName(input).toCql();
+			}
+		});
+
+		Batch b = QueryBuilder.batch();
+		for (String table : tables.keySet()) {
+			for (T entity : tables.get(table)) {
+				b.add( createDeleteQuery(table, entity, options, cassandraConverter));
+			}
+		}
+		CqlTemplate.addQueryOptions(b, options);
+
+		execute(b);
 	}
 
 	protected <T> Cancellable doBatchDeleteAsync(final List<T> entities, final DeletionListener listener,
@@ -669,9 +686,8 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 	}
 
 	protected <T> T doInsert(T entity, WriteOptions options) {
-
 		Assert.notNull(entity);
-		Insert insert = createInsertQuery(getTableName(entity.getClass()).toCql(), entity, options, cassandraConverter);
+		Insert insert = createInsertQuery(getTableName(entity).toCql(), entity, options, cassandraConverter);
 		execute(insert);
 		return entity;
 	}
@@ -708,7 +724,6 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 	}
 
 	protected <T> List<T> doBatchWrite(List<T> entities, WriteOptions options, boolean insert) {
-
 		if (entities == null || entities.size() == 0) {
 			if (logger.isWarnEnabled()) {
 				logger.warn("no-op due to given null or empty list");
@@ -716,9 +731,27 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 			return entities;
 		}
 
-		String tableName = getTableName(entities.get(0).getClass()).toCql();
-		Batch b = insert ? createInsertBatchQuery(tableName, entities, options, cassandraConverter)
-				: createUpdateBatchQuery(tableName, entities, options, cassandraConverter);
+
+		ImmutableListMultimap<String, T> tables = FluentIterable.from(entities).index(new Function<T, String>() {
+			@Override
+			public String apply(T input) {
+				return getTableName(input).toCql();
+			}
+		});
+
+		Batch b = QueryBuilder.batch();
+
+		for (String table : tables.keySet()) {
+			for (T entity : tables.get(table)) {
+				b.add( insert ?
+						createInsertQuery(table, entity, options, cassandraConverter)
+						: createUpdateQuery(table, entity, options, cassandraConverter)
+
+				);
+			}
+		}
+		CqlTemplate.addQueryOptions(b, options);
+
 		execute(b);
 
 		return entities;
@@ -803,7 +836,7 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 	protected <T> void doDelete(T entity, QueryOptions options) {
 
 		Assert.notNull(entity);
-		Delete delete = createDeleteQuery(getTableName(entity.getClass()).toCql(), entity, options, cassandraConverter);
+		Delete delete = createDeleteQuery(getTableName(entity).toCql(), entity, options, cassandraConverter);
 		execute(delete);
 	}
 
@@ -831,7 +864,7 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 	protected <T> T doUpdate(T entity, WriteOptions options) {
 
 		Assert.notNull(entity);
-		Update update = createUpdateQuery(getTableName(entity.getClass()).toCql(), entity, options, cassandraConverter);
+		Update update = createUpdateQuery(getTableName(entity).toCql(), entity, options, cassandraConverter);
 		execute(update);
 		return entity;
 	}
@@ -1014,7 +1047,10 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 			throw new IllegalArgumentException(String.format("unknown persistent entity class [%s]", clazz.getName()));
 		}
 
-		truncate(mappingContext.getPersistentEntity(clazz).getTableName());
+		CassandraPersistentEntity<?> persistentEntity = mappingContext.getPersistentEntity(clazz);
+		for (CqlIdentifier tableName : persistentEntity.getEntityDiscriminator().getTableNames()) {
+			truncate(tableName);
+		}
 	}
 
 	@Override
@@ -1088,5 +1124,14 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
             return cassandraConverter.getConversionService();
         }
 
+	private CqlIdentifier getTableName(Class<?> type, Object id) {
+		CassandraPersistentEntity<?> entity = mappingContext.getPersistentEntity(type);
+		return entity.getEntityDiscriminator().getTableNameForId(id);
+	}
+
+	private CqlIdentifier getTableName(Object type) {
+		CassandraPersistentEntity<Object> entity = (CassandraPersistentEntity<Object>) mappingContext.getPersistentEntity(type.getClass());
+		return entity.getEntityDiscriminator().getTableNameFor(type);
+	}
 
 }

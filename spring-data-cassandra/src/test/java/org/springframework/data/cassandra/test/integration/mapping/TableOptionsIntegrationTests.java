@@ -7,6 +7,7 @@ import org.springframework.cassandra.core.keyspace.CreateTableSpecification;
 import org.springframework.data.cassandra.mapping.*;
 import org.springframework.data.util.ClassTypeInformation;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.Assert.assertEquals;
@@ -30,7 +31,9 @@ public class TableOptionsIntegrationTests {
 
     @Test
     public void validateTableOptions() {
-        CreateTableSpecification tableSpec = context.getCreateTableSpecificationFor(entity);
+        List<CreateTableSpecification> specs = context.getCreateTableSpecificationFor(entity);
+        assertEquals(1, specs.size());
+        CreateTableSpecification tableSpec = specs.get(0);
         assertEquals(
                 "Table comment not present in CreateTableSpecification",
                 "'" + Entity.class.getAnnotation(Table.class).comment() + "'",

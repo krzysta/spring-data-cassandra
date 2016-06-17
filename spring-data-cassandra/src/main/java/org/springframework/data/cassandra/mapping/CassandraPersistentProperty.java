@@ -147,6 +147,8 @@ public interface CassandraPersistentProperty extends PersistentProperty<Cassandr
 	 */
 	Map<CqlIdentifier, String> getColumnComments();
 
+	boolean isDiscriminator();
+
 	public enum PropertyToFieldNameConverter implements Converter<CassandraPersistentProperty, String> {
 
 		INSTANCE;

@@ -21,6 +21,9 @@ public abstract class ForceQuotedCompositePrimaryKeyRepositoryIntegrationTestsDe
 	ExplicitRepository e;
 
 	@Autowired
+	MultitableRepository m;
+
+	@Autowired
 	CassandraTemplate t;
 
 	@Before
@@ -29,6 +32,7 @@ public abstract class ForceQuotedCompositePrimaryKeyRepositoryIntegrationTestsDe
 		tests.i = i;
 		tests.e = e;
 		tests.t = t;
+		tests.m = m;
 
 		tests.before();
 	}
@@ -42,5 +46,10 @@ public abstract class ForceQuotedCompositePrimaryKeyRepositoryIntegrationTestsDe
 			String keyOneColumnName) {
 
 		tests.testExplicit(tableName, stringValueColumnName, keyZeroColumnName, keyOneColumnName);
+	}
+
+	public void testMultitable(String tableName, String discriminator, String stringValueColumnName, String keyZeroColumnName,
+							   String keyOneColumnName) {
+		tests.testMultitable(tableName, discriminator, stringValueColumnName, keyZeroColumnName, keyOneColumnName);
 	}
 }

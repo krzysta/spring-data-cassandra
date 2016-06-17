@@ -13,6 +13,7 @@ public class ForceQuotedCompositePrimaryKeyRepositoryIntegrationTests {
 
 	ImplicitRepository i;
 	ExplicitRepository e;
+	MultitableRepository m;
 	CassandraTemplate t;
 
 	public void before() {
@@ -82,5 +83,34 @@ public class ForceQuotedCompositePrimaryKeyRepositoryIntegrationTests {
 		// delete
 		e.delete(key);
 		assertNull(e.findOne(key));
+	}
+
+	public void testMultitable(String tableName, String discriminator, String stringValueColumnName, String keyZeroColumnName,
+							 String keyOneColumnName) {
+		MultitableKey key = new MultitableKey(discriminator, UUID.randomUUID().toString(), UUID.randomUUID().toString());
+		Multitable entity = new Multitable(key);
+
+		// insert
+		Multitable s = m.save(entity);
+		assertSame(s, entity);
+
+		// select
+		Multitable f = m.findOne(key);
+		assertNotSame(f, entity);
+		String stringValue = query(stringValueColumnName, tableName , keyZeroColumnName, f.getPrimaryKey().getKeyZero(),
+				keyOneColumnName, f.getPrimaryKey().getKeyOne());
+		assertEquals(f.getStringValue(), stringValue);
+
+		// update
+		f.setStringValue(f.getStringValue() + "X");
+		Multitable u = m.save(f);
+		assertSame(u, f);
+		f = m.findOne(u.getPrimaryKey());
+		assertNotSame(f, u);
+		assertEquals(u.getStringValue(), f.getStringValue());
+
+		// delete
+		m.delete(key);
+		assertNull(m.findOne(key));
 	}
 }

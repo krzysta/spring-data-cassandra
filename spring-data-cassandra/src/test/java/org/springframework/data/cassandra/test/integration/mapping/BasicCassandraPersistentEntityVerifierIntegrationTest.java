@@ -47,10 +47,11 @@ public class BasicCassandraPersistentEntityVerifierIntegrationTest {
 
 	}
 
-	@Test(expected = MappingException.class)
+	@Test
 	public void testNonPersistentType() {
 
-		mappingContext.getPersistentEntity(NonPersistentClass.class);
+		CassandraPersistentEntity<?> persistentEntity = mappingContext.getPersistentEntity(NonPersistentClass.class);
+		assertNull(persistentEntity);
 
 	}
 

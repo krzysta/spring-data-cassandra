@@ -141,8 +141,9 @@ public class CassandraCompositePrimaryKeyIntegrationTests {
 			actualColumnNames.addAll(p.getColumnNames());
 		}
 		assertTrue(expectedColumnNames.equals(actualColumnNames));
-
-		CreateTableSpecification spec = context.getCreateTableSpecificationFor(thing);
+        List<CreateTableSpecification> specs = context.getCreateTableSpecificationFor(thing);
+		assertEquals(1, specs.size());
+		CreateTableSpecification spec = specs.get(0);
 
 		List<ColumnSpecification> partitionKeyColumns = spec.getPartitionKeyColumns();
 		assertEquals(1, partitionKeyColumns.size());

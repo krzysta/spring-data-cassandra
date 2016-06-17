@@ -130,6 +130,10 @@ public abstract class AbstractCassandraQuery implements RepositoryQuery {
 		Class<?> declaredReturnType = method.getReturnType().getType();
 		Class<?> returnedUnwrappedObjectType = method.getReturnedObjectType();
 
+		if (method.isVoidQuery()){
+			return null;
+		}
+
 		if (method.isSingleEntityQuery()) {
 			return getSingleEntity(resultSet, returnedUnwrappedObjectType);
 		}

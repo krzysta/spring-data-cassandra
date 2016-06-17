@@ -124,13 +124,6 @@ public class BasicCassandraMappingContext extends
 
 		// now do some caching of the entity
 
-		Set<CassandraPersistentEntity<?>> entities = entitySetsByTableName.get(entity.getTableName());
-		if (entities == null) {
-			entities = new HashSet<CassandraPersistentEntity<?>>();
-		}
-		entities.add(entity);
-		entitySetsByTableName.put(entity.getTableName(), entities);
-
 		if (entity.isCompositePrimaryKey()) {
 			primaryKeyEntities.add(entity);
 		} else {
@@ -147,64 +140,76 @@ public class BasicCassandraMappingContext extends
 		this.context = applicationContext;
 	}
 
+	private <T> void addTableUsage(CqlIdentifier tableName, CassandraPersistentEntity<T> entity) {
+		Set<CassandraPersistentEntity<?>> entities = entitySetsByTableName.get(tableName);
+		if (entities == null) {
+			entities = new HashSet<CassandraPersistentEntity<?>>();
+		}
+		entities.add(entity);
+		entitySetsByTableName.put(tableName, entities);
+	}
+
 	@Override
 	public boolean usesTable(TableMetadata table) {
                 return entitySetsByTableName.containsKey(CqlIdentifier.cqlId(table.getName()));
 	}
 
 	@Override
-	public CreateTableSpecification getCreateTableSpecificationFor(CassandraPersistentEntity<?> entity) {
+	public List<CreateTableSpecification> getCreateTableSpecificationFor(final CassandraPersistentEntity<?> entity) {
 
 		Assert.notNull(entity);
-
-		CreateTableSpecification _spec = createTable().name(entity.getTableName());
-		for (TableOption option : entity.getTableOptions().keySet()) {
-			_spec = _spec.with(option, entity.getTableOptions().get(option));
-		}
-
-		final CreateTableSpecification spec = _spec;
-
-		entity.doWithProperties(new PropertyHandler<CassandraPersistentProperty>() {
-
-			@Override
-			public void doWithPersistentProperty(CassandraPersistentProperty prop) {
-
-				if (prop.isCompositePrimaryKey()) {
-
-					CassandraPersistentEntity<?> pkEntity = getPersistentEntity(prop.getRawType());
-
-					pkEntity.doWithProperties(new PropertyHandler<CassandraPersistentProperty>() {
-
-						@Override
-						public void doWithPersistentProperty(CassandraPersistentProperty pkProp) {
-
-							if (pkProp.isPartitionKeyColumn()) {
-								spec.partitionKeyColumn(pkProp.getColumnName(), pkProp.getDataType());
-							} else { // it's a cluster column
-								spec.clusteredKeyColumn(pkProp.getColumnName(), pkProp.getDataType(), pkProp.getPrimaryKeyOrdering());
-							}
-						}
-					});
-
-				} else {
-
-					if (prop.isIdProperty() || prop.isPartitionKeyColumn()) {
-						spec.partitionKeyColumn(prop.getColumnName(), prop.getDataType());
-					} else if (prop.isClusterKeyColumn()) {
-						spec.clusteredKeyColumn(prop.getColumnName(), prop.getDataType());
-					} else {
-						spec.column(prop.getColumnName(), prop.getDataType());
-					}
-				}
+		List<CqlIdentifier> tableNames = entity.getEntityDiscriminator().getTableNames();
+		List<CreateTableSpecification> tables = new ArrayList<CreateTableSpecification>(tableNames.size());
+		for ( CqlIdentifier tableName : tableNames) {
+			CreateTableSpecification _spec = createTable().name(tableName);
+			for (TableOption option : entity.getTableOptions().keySet()) {
+				_spec = _spec.with(option, entity.getTableOptions().get(option));
 			}
 
-		});
+			final CreateTableSpecification spec = _spec;
 
-		if (spec.getPartitionKeyColumns().isEmpty()) {
-			throw new MappingException("no partition key columns found in the entity " + entity.getType());
+			entity.doWithProperties(new PropertyHandler<CassandraPersistentProperty>() {
+
+				@Override
+				public void doWithPersistentProperty(CassandraPersistentProperty prop) {
+
+					if (prop.isCompositePrimaryKey()) {
+
+						CassandraPersistentEntity<?> pkEntity = getPersistentEntity(prop.getRawType());
+
+						pkEntity.doWithProperties(new PropertyHandler<CassandraPersistentProperty>() {
+
+							@Override
+							public void doWithPersistentProperty(CassandraPersistentProperty pkProp) {
+								if (pkProp.isPartitionKeyColumn()) {
+									spec.partitionKeyColumn(pkProp.getColumnName(), pkProp.getDataType());
+								} else { // it's a cluster column
+									spec.clusteredKeyColumn(pkProp.getColumnName(), pkProp.getDataType(), pkProp.getPrimaryKeyOrdering());
+								}
+							}
+						});
+
+					} else {
+
+						if (prop.isIdProperty() || prop.isPartitionKeyColumn()) {
+							spec.partitionKeyColumn(prop.getColumnName(), prop.getDataType());
+						} else if (prop.isClusterKeyColumn()) {
+							spec.clusteredKeyColumn(prop.getColumnName(), prop.getDataType());
+						} else {
+							spec.column(prop.getColumnName(), prop.getDataType());
+						}
+					}
+				}
+
+			});
+
+			if (spec.getPartitionKeyColumns().isEmpty()) {
+				throw new MappingException("no partition key columns found in the entity " + entity.getType());
+			}
+			tables.add(spec);
 		}
 
-		return spec;
+		return tables;
 	}
 
 	public void setMapping(Mapping mapping) {
@@ -319,6 +324,10 @@ public class BasicCassandraMappingContext extends
 	        // entity is not persistent
 	        return null;
 	    }
-	    return super.addPersistentEntity(typeInformation);
+		CassandraPersistentEntity<?> entity = super.addPersistentEntity(typeInformation);
+		for (CqlIdentifier tableName : entity.getEntityDiscriminator().getTableNames()) {
+			addTableUsage(tableName, entity);
+		}
+		return entity;
 	}
 }

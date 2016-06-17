@@ -401,6 +401,11 @@ public class BasicCassandraPersistentProperty extends AnnotationBasedPersistentP
 		return this.columnComments = Collections.unmodifiableMap(determineColumnComments());
 	}
 
+	@Override
+	public boolean isDiscriminator() {
+		return getType().isAnnotationPresent(TableDiscriminator.class);
+	}
+
 	private Map<CqlIdentifier, String> determineColumnComments() {
 		Map<CqlIdentifier, String> comments = new HashMap<CqlIdentifier, String>();
 

@@ -22,9 +22,12 @@ import java.util.List;
 
 import org.springframework.cassandra.core.keyspace.CreateKeyspaceSpecification;
 import org.springframework.cassandra.test.unit.support.Utils;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.convert.ConversionService;
 import org.springframework.data.cassandra.config.SchemaAction;
 import org.springframework.data.cassandra.config.java.AbstractCassandraConfiguration;
+import org.springframework.data.cassandra.test.integration.repository.ConversionServiceFactoryBean;
 
 /**
  * Setup any spring configuration for unit tests
@@ -60,4 +63,15 @@ public class IntegrationTestConfig extends AbstractCassandraConfiguration {
 	protected List<CreateKeyspaceSpecification> getKeyspaceCreations() {
 		return Arrays.asList(createKeyspace().name(getKeyspaceName()).withSimpleReplication());
 	}
+
+	@Bean
+	@Override
+	public ConversionService conversionService(){
+		try {
+			return new ConversionServiceFactoryBean().getObject();
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+
 }
