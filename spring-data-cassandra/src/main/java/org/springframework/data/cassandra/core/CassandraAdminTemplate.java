@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.cassandra.core.SessionCallback;
 import org.springframework.cassandra.core.cql.CqlIdentifier;
 import org.springframework.cassandra.core.cql.generator.CreateTableCqlGenerator;
+import org.springframework.cassandra.core.keyspace.CreateTableSpecification;
 import org.springframework.cassandra.core.keyspace.DropTableSpecification;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.cassandra.convert.CassandraConverter;
@@ -60,12 +61,14 @@ public class CassandraAdminTemplate extends CassandraTemplate implements Cassand
 			@Override
 			public Object doInSession(Session s) throws DataAccessException {
 
-				String cql = new CreateTableCqlGenerator(getCassandraMappingContext().
-						getCreateTableSpecificationFor(entity).ifNotExists(ifNotExists)).toCql();
+				List<CreateTableSpecification> tableSpecs = getCassandraMappingContext().getCreateTableSpecificationFor(entity);
+				for (CreateTableSpecification tableSpec : tableSpecs) {
+					String cql = new CreateTableCqlGenerator(tableSpec.ifNotExists(ifNotExists)).toCql();
 
-				log.debug(cql);
+					log.debug(cql);
 
-				s.execute(cql);
+					s.execute(cql);
+				}
 				return null;
 			}
 		});

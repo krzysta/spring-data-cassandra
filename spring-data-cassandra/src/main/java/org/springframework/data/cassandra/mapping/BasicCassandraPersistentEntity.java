@@ -60,6 +60,7 @@ public class BasicCassandraPersistentEntity<T> extends BasicPersistentEntity<T, 
 	protected ApplicationContext context;
 	protected Boolean forceQuote;
 	protected Map<TableOption, Object> tableOptions = new HashMap<TableOption, Object>();
+	protected EntityDiscriminator<T> discriminator;
 
 	public BasicCassandraPersistentEntity(TypeInformation<T> typeInformation) {
 		this(typeInformation, null);
@@ -135,7 +136,15 @@ public class BasicCassandraPersistentEntity<T> extends BasicPersistentEntity<T, 
 
 	@Override
 	public CqlIdentifier getTableName() {
+		
+		if (getEntityDiscriminator().isMultitable()) {
+			throw new UnsupportedCassandraOperationException("Cannot get table name for multitable entity "+getName());
+		}
 
+		return doGetTableName();
+	}
+
+	private CqlIdentifier doGetTableName() {
 		if (tableName != null) {
 			return tableName;
 		}
@@ -148,6 +157,9 @@ public class BasicCassandraPersistentEntity<T> extends BasicPersistentEntity<T, 
 
 		Assert.notNull(tableName);
 		this.tableName = tableName;
+		//rebuild discriminator after table name change
+		this.discriminator=null;
+		getEntityDiscriminator();
 	}
 
 	@Override
@@ -165,6 +177,26 @@ public class BasicCassandraPersistentEntity<T> extends BasicPersistentEntity<T, 
 	@Override
 	public Map<TableOption, Object> getTableOptions() {
 		return tableOptions;
+	}
+
+	@Override
+	public EntityDiscriminator<T> getEntityDiscriminator() {
+		if (discriminator == null) {
+			CassandraPersistentProperty idProperty = getIdProperty();
+			if (idProperty != null) {
+				CassandraPersistentEntity<?> key = getMappingContext().getPersistentEntity(idProperty.getType());
+				if (key != null) {
+					CassandraPersistentProperty persistentProperty = key.getPersistentProperty(TableDiscriminator.class);
+					if (persistentProperty != null) {
+						discriminator = new MultitableEntityDiscriminator<T>(this);
+					}
+				}
+			}
+			if (discriminator ==null){
+				discriminator= new BasicEntityDiscriminator<T>(doGetTableName());
+			}
+		}
+		return discriminator;
 	}
 
 	@Override

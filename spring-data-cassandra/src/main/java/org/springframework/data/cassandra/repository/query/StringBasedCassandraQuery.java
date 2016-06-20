@@ -11,6 +11,7 @@ import org.springframework.data.cassandra.core.CassandraOperations;
 public class StringBasedCassandraQuery extends AbstractCassandraQuery {
 
 	private static final Pattern PLACEHOLDER = Pattern.compile("\\?(\\d+)");
+	private static final Pattern TABLE_PLACEHOLDER = Pattern.compile("@table\\b");
 	private static final Logger LOG = LoggerFactory.getLogger(StringBasedCassandraQuery.class);
 
 	protected String query;
@@ -32,10 +33,15 @@ public class StringBasedCassandraQuery extends AbstractCassandraQuery {
 	}
 
 	private String replacePlaceholders(String input, CassandraParameterAccessor accessor, CassandraConverter converter) {
+		String result = input;
+		Matcher tableMatcher = TABLE_PLACEHOLDER.matcher(input);
+		if (tableMatcher.find()){
+			String group = tableMatcher.group();
+			String replacement = getQueryMethod().resolveTableName(accessor);
+			result=result.replace(group, replacement);
+		}
 
 		Matcher matcher = PLACEHOLDER.matcher(input);
-		String result = input;
-
 		while (matcher.find()) {
 			String group = matcher.group();
 			int index = Integer.parseInt(matcher.group(1));

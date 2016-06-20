@@ -15,16 +15,19 @@
  */
 package org.springframework.data.cassandra.test.integration.mappingcontext;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
+
+import java.io.Serializable;
+import java.util.List;
+import java.util.Set;
 
 import org.junit.Test;
-import org.springframework.data.cassandra.mapping.CassandraPersistentEntity;
-import org.springframework.data.cassandra.mapping.BasicCassandraMappingContext;
-import org.springframework.data.cassandra.mapping.PrimaryKey;
-import org.springframework.data.cassandra.mapping.Table;
-import org.springframework.data.mapping.model.MappingException;
+import org.springframework.cassandra.core.PrimaryKeyType;
+import org.springframework.cassandra.core.keyspace.CreateTableSpecification;
+import org.springframework.cassandra.core.keyspace.TableSpecification;
+import org.springframework.data.cassandra.mapping.*;
+
+import com.google.common.collect.Sets;
 
 public class MappingContextIntegrationTests {
 
@@ -42,12 +45,29 @@ public class MappingContextIntegrationTests {
 		String key;
 	}
 
+	@Table("T_@discriminator")
+	public static class Complex {
+		@PrimaryKeyClass
+		public static class ComplexKey implements Serializable{
+			@TableDiscriminator(value = {"A", "B"}, converter = StringDiscriminatorConverter.class)
+			String discriminator;
+			@PrimaryKeyColumn(type = PrimaryKeyType.PARTITIONED, ordinal = 0)
+			String key;
+
+		}
+
+		@PrimaryKey
+		ComplexKey key;
+	}
+
+
 	BasicCassandraMappingContext ctx = new BasicCassandraMappingContext();
 
-	@Test(expected = MappingException.class)
+	@Test
 	public void testGetPersistentEntityOfTransientType() {
 
 		CassandraPersistentEntity<?> entity = ctx.getPersistentEntity(Transient.class);
+		assertNull(entity);
 
 	}
 
@@ -60,4 +80,23 @@ public class MappingContextIntegrationTests {
 		assertNotNull(ctx.getExistingPersistentEntity(X.class));
 		assertFalse(ctx.contains(Y.class));
 	}
+
+	@Test
+	public void testGetMultitableEntity(){
+		CassandraPersistentEntity<?> entity = ctx.getPersistentEntity(Complex.class);
+		assertTrue(entity.getEntityDiscriminator() instanceof MultitableEntityDiscriminator);
+	}
+
+	@Test
+	public void testGetMultitableEntitySpec(){
+		CassandraPersistentEntity<?> entity = ctx.getPersistentEntity(Complex.class);
+		List<CreateTableSpecification> specs = ctx.getCreateTableSpecificationFor(entity);
+		assertEquals(2, specs.size());
+		Set<String> names = Sets.newHashSet("t_a", "t_b");
+		for (TableSpecification spec : specs) {
+			assertTrue(names.remove(spec.getName().toCql()));
+		}
+		assertEquals(0 , names.size());
+	}
+
 }

@@ -16,6 +16,7 @@
 package org.springframework.data.cassandra.mapping;
 
 import java.util.Collection;
+import java.util.List;
 
 import org.springframework.cassandra.core.keyspace.CreateTableSpecification;
 import org.springframework.data.mapping.context.MappingContext;
@@ -59,11 +60,11 @@ public interface CassandraMappingContext extends
 	Collection<CassandraPersistentEntity<?>> getNonPrimaryKeyEntities();
 
 	/**
-	 * Returns a {@link CreateTableSpecification} for the given entity, including all mapping information.
+	 * Returns a list of {@link CreateTableSpecification} for the given entity, including all mapping information.
 	 * 
 	 * @param The entity. May not be null.
 	 */
-	CreateTableSpecification getCreateTableSpecificationFor(CassandraPersistentEntity<?> entity);
+	List<CreateTableSpecification> getCreateTableSpecificationFor(CassandraPersistentEntity<?> entity);
 
 	/**
 	 * Returns whether this mapping context has any entities mapped to the given table.

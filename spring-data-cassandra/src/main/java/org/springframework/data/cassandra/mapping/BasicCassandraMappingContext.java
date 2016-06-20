@@ -123,14 +123,7 @@ public class BasicCassandraMappingContext extends
 		}
 
 		// now do some caching of the entity
-
-		Set<CassandraPersistentEntity<?>> entities = entitySetsByTableName.get(entity.getTableName());
-		if (entities == null) {
-			entities = new HashSet<CassandraPersistentEntity<?>>();
-		}
-		entities.add(entity);
-		entitySetsByTableName.put(entity.getTableName(), entities);
-
+		
 		if (entity.isCompositePrimaryKey()) {
 			primaryKeyEntities.add(entity);
 		} else {
@@ -147,17 +140,36 @@ public class BasicCassandraMappingContext extends
 		this.context = applicationContext;
 	}
 
+	private <T> void addTableUsage(CqlIdentifier tableName, CassandraPersistentEntity<T> entity) {
+		Set<CassandraPersistentEntity<?>> entities = entitySetsByTableName.get(tableName);
+		if (entities == null) {
+			entities = new HashSet<CassandraPersistentEntity<?>>();
+		}
+		entities.add(entity);
+		entitySetsByTableName.put(tableName, entities);
+	}
+
 	@Override
 	public boolean usesTable(TableMetadata table) {
                 return entitySetsByTableName.containsKey(CqlIdentifier.cqlId(table.getName()));
 	}
 
 	@Override
-	public CreateTableSpecification getCreateTableSpecificationFor(CassandraPersistentEntity<?> entity) {
+	public List<CreateTableSpecification> getCreateTableSpecificationFor(final CassandraPersistentEntity<?> entity) {
 
 		Assert.notNull(entity);
+		List<CqlIdentifier> tableNames = entity.getEntityDiscriminator().getTableNames();
+		List<CreateTableSpecification> tables = new ArrayList<CreateTableSpecification>(tableNames.size());
+		for ( CqlIdentifier tableName : tableNames) {
+			final CreateTableSpecification spec = createSpec(entity, tableName);
+			tables.add(spec);
+		}
 
-		CreateTableSpecification _spec = createTable().name(entity.getTableName());
+		return tables;
+	}
+
+	private CreateTableSpecification createSpec(final CassandraPersistentEntity<?> entity, CqlIdentifier tableName) {
+		CreateTableSpecification _spec = createTable().name(tableName);
 		for (TableOption option : entity.getTableOptions().keySet()) {
 			_spec = _spec.with(option, entity.getTableOptions().get(option));
 		}
@@ -319,6 +331,10 @@ public class BasicCassandraMappingContext extends
 	        // entity is not persistent
 	        return null;
 	    }
-	    return super.addPersistentEntity(typeInformation);
+		CassandraPersistentEntity<?> entity = super.addPersistentEntity(typeInformation);
+		for (CqlIdentifier tableName : entity.getEntityDiscriminator().getTableNames()) {
+			addTableUsage(tableName, entity);
+		}
+		return entity;
 	}
 }

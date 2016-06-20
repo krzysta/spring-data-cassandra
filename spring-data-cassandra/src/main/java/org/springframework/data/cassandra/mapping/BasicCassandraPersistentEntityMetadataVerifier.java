@@ -51,6 +51,7 @@ public class BasicCassandraPersistentEntityMetadataVerifier implements Cassandra
 		final List<CassandraPersistentProperty> partitionKeyColumns = new ArrayList<CassandraPersistentProperty>();
 		final List<CassandraPersistentProperty> clusterKeyColumns = new ArrayList<CassandraPersistentProperty>();
 		final List<CassandraPersistentProperty> primaryKeyColumns = new ArrayList<CassandraPersistentProperty>();
+		final List<CassandraPersistentProperty> discriminatorProperties = new ArrayList<CassandraPersistentProperty>();
 
 		/*
 		 * Determine how this type is annotated
@@ -84,7 +85,9 @@ public class BasicCassandraPersistentEntityMetadataVerifier implements Cassandra
 
 			@Override
 			public void doWithPersistentProperty(CassandraPersistentProperty p) {
-
+				if (p.isDiscriminator()){
+					discriminatorProperties.add(p);
+				}
 				if (p.isIdProperty()) {
 					idProperties.add(p);
 				} else if (p.isCompositePrimaryKey()) {
@@ -107,6 +110,31 @@ public class BasicCassandraPersistentEntityMetadataVerifier implements Cassandra
 		 * Perform rules verification on PrimaryKeyClass
 		 */
 		if (isPrimaryKeyClass) {
+
+			if (discriminatorProperties.size()>1){
+				exceptions.add(new MappingException(String.format(
+						"composite primary key type [%s] has %d fields annotated with @%s", entity.getType().getName(),
+						discriminatorProperties.size(),
+						PrimaryKeyColumn.class.getSimpleName())));
+			}
+			if (discriminatorProperties.size()==1){
+				CassandraPersistentProperty discProp = discriminatorProperties.get(0);
+				TableDiscriminator annotation = discProp.findAnnotation(TableDiscriminator.class);
+				if (String.class.isAssignableFrom(discProp.getType())){
+					if (annotation.value().length==0){
+						exceptions.add(new MappingException(String.format(
+								"table discriminator on key type [%s] must have defined available values for string type",
+								entity.getType().getName())));
+					}
+				}else if (!discProp.getType().isEnum()){
+					if (annotation.converter().length!=1){
+						exceptions.add(new MappingException(String.format(
+								"table discriminator on key type [%s] must have exactly one converter defined",
+								entity.getType().getName())));
+					}
+				}
+				//todo maybe check field and converter types
+			}
 
 			/*
 			 * Must have at least 1 attribute annotated with @PrimaryKeyColumn

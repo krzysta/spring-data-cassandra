@@ -28,9 +28,7 @@ import org.springframework.data.cassandra.convert.CassandraConverter;
 import org.springframework.data.cassandra.convert.MappingCassandraConverter;
 import org.springframework.data.cassandra.core.CassandraAdminOperations;
 import org.springframework.data.cassandra.core.CassandraAdminTemplate;
-import org.springframework.data.cassandra.mapping.CassandraMappingContext;
-import org.springframework.data.cassandra.mapping.BasicCassandraMappingContext;
-import org.springframework.data.cassandra.mapping.Table;
+import org.springframework.data.cassandra.mapping.*;
 import org.springframework.data.mapping.context.MappingContext;
 
 /**
@@ -112,6 +110,11 @@ public abstract class AbstractCassandraConfiguration extends AbstractClusterConf
 	
 	@Autowired
 	ConversionService conversionService;
+
+	@Bean
+	public DiscriminatorConverter<?> stringDiscriminatorConverter(){
+		return new StringDiscriminatorConverter();
+	}
 
     @Override
 	public void setBeanClassLoader(ClassLoader classLoader) {

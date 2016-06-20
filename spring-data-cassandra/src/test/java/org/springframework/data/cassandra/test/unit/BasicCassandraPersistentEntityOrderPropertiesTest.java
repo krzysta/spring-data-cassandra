@@ -69,30 +69,6 @@ public class BasicCassandraPersistentEntityOrderPropertiesTest {
 
 	}
 
-	@Test
-	public void testTablePropertyOrder() {
-
-		CassandraPersistentEntity<?> entity = mappingContext.getPersistentEntity(CompositeKeyEntity.class);
-
-		expected = new LinkedList<CassandraPersistentProperty>();
-		expected.add(entity.getPersistentProperty("key"));
-		expected.add(entity.getPersistentProperty("attribute"));
-		expected.add(entity.getPersistentProperty("text"));
-
-		final List<CassandraPersistentProperty> actual = new LinkedList<CassandraPersistentProperty>();
-
-		entity.doWithProperties(new PropertyHandler<CassandraPersistentProperty>() {
-
-			@Override
-			public void doWithPersistentProperty(CassandraPersistentProperty persistentProperty) {
-				actual.add(persistentProperty);
-			}
-		});
-
-		assertEquals(expected, actual);
-
-	}
-
 	@Table
 	static class CompositeKeyEntity {
 
