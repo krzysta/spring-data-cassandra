@@ -47,4 +47,9 @@ public @interface PrimaryKey {
 	 * Whether to cause the column name to be force-quoted if the primary key is of a simple type, else ignored.
 	 */
 	boolean forceQuote() default false;
+
+	/**
+	 * A free-form, human-readable comment describing the column.
+	 */
+	String comment() default "";
 }

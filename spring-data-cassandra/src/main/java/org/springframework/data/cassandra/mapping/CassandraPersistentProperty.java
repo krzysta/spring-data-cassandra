@@ -16,6 +16,7 @@
 package org.springframework.data.cassandra.mapping;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.cassandra.core.Ordering;
 import org.springframework.cassandra.core.cql.CqlIdentifier;
@@ -132,6 +133,19 @@ public interface CassandraPersistentProperty extends PersistentProperty<Cassandr
 	 * @param columnName
 	 */
 	void setColumnNames(List<CqlIdentifier> columnNames);
+
+	/**
+	 * The comment of the single column to which the property is persisted. This is a convenience method when the caller
+	 * knows that the property is mapped to a single column. Throws {@link IllegalStateException} if this property is
+	 * mapped to multiple columns.
+	 */
+	String getColumnComment();
+
+	/**
+	 * The name-to-comment map of the columns to which the property is persisted if this is a composite primary key property. Never
+	 * returns null.
+	 */
+	Map<CqlIdentifier, String> getColumnComments();
 
 	public enum PropertyToFieldNameConverter implements Converter<CassandraPersistentProperty, String> {
 

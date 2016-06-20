@@ -102,6 +102,7 @@ public class CassandraCqlClusterParser extends AbstractBeanDefinitionParser {
 		addOptionalPropertyValue(builder, "sslEnabled", element, "ssl-enabled", null);
 
 		addOptionalPropertyReference(builder, "authProvider", element, "auth-info-provider-ref", null);
+		addOptionalPropertyReference(builder, "queryOptions", element, "query-options-ref", null);
 		addOptionalPropertyReference(builder, "loadBalancingPolicy", element, "load-balancing-policy-ref", null);
 		addOptionalPropertyReference(builder, "reconnectionPolicy", element, "reconnection-policy-ref", null);
 		addOptionalPropertyReference(builder, "retryPolicy", element, "retry-policy-ref", null);

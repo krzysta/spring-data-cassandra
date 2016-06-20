@@ -49,7 +49,8 @@
 		<build.cassandra.storage_port>9044</build.cassandra.storage_port>
 		<build.cassandra.ssl_storage_port>9045</build.cassandra.ssl_storage_port>
 
-		<release.maven.plugin.version>2.5.1</release.maven.plugin.version>
+		<release.maven.plugin.version>2.5.3</release.maven.plugin.version>
+		<guava>16.0.1</guava>
 	</properties>
 
 	<developers>

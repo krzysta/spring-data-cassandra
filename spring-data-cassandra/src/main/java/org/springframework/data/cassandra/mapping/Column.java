@@ -56,4 +56,9 @@ public @interface Column {
 	 * Whether to cause the column name to be force-quoted.
 	 */
 	boolean forceQuote() default false;
+
+	/**
+	 * A free-form, human-readable comment describing the column.
+	 */
+	String comment() default "";
 }

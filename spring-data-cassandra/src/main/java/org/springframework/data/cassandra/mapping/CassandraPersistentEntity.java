@@ -16,8 +16,10 @@
 package org.springframework.data.cassandra.mapping;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.cassandra.core.cql.CqlIdentifier;
+import org.springframework.cassandra.core.keyspace.TableOption;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.data.mapping.PersistentEntity;
@@ -51,4 +53,10 @@ public interface CassandraPersistentEntity<T> extends MutablePersistentEntity<T,
 	ApplicationContext getApplicationContext();
 
 	void setForceQuote(boolean forceQuote);
+
+
+	/**
+	 * Returns {@link TableOption}s and values associated with the entity
+	 */
+	Map<TableOption, Object> getTableOptions();
 }

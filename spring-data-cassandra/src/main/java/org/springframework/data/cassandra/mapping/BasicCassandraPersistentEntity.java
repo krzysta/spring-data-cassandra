@@ -16,12 +16,16 @@
 package org.springframework.data.cassandra.mapping;
 
 import static org.springframework.cassandra.core.cql.CqlIdentifier.cqlId;
+import static org.springframework.cassandra.core.keyspace.TableOption.COMMENT;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.BeansException;
 import org.springframework.cassandra.core.cql.CqlIdentifier;
+import org.springframework.cassandra.core.keyspace.TableOption;
 import org.springframework.cassandra.support.exception.UnsupportedCassandraOperationException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -40,7 +44,7 @@ import org.springframework.util.StringUtils;
 
 /**
  * Cassandra specific {@link BasicPersistentEntity} implementation that adds Cassandra specific metadata.
- * 
+ *
  * @author Alex Shvid
  * @author Matthew T. Adams
  */
@@ -55,6 +59,7 @@ public class BasicCassandraPersistentEntity<T> extends BasicPersistentEntity<T, 
 	protected CassandraPersistentEntityMetadataVerifier verifier = DEFAULT_VERIFIER;
 	protected ApplicationContext context;
 	protected Boolean forceQuote;
+	protected Map<TableOption, Object> tableOptions = new HashMap<TableOption, Object>();
 
 	public BasicCassandraPersistentEntity(TypeInformation<T> typeInformation) {
 		this(typeInformation, null);
@@ -85,6 +90,14 @@ public class BasicCassandraPersistentEntity<T> extends BasicPersistentEntity<T, 
 		this.mappingContext = mappingContext;
 
 		setVerifier(verifier);
+		setupTableOptions();
+	}
+
+	private void setupTableOptions() {
+		Table anno = getType().getAnnotation(Table.class);
+		if (anno != null && StringUtils.hasText(anno.comment())) {
+			tableOptions.put(COMMENT, anno.comment());
+		}
 	}
 
 	protected CqlIdentifier determineTableName() {
@@ -147,6 +160,11 @@ public class BasicCassandraPersistentEntity<T> extends BasicPersistentEntity<T, 
 		}
 
 		setTableName(cqlId(tableName.getUnquoted(), forceQuote));
+	}
+
+	@Override
+	public Map<TableOption, Object> getTableOptions() {
+		return tableOptions;
 	}
 
 	@Override

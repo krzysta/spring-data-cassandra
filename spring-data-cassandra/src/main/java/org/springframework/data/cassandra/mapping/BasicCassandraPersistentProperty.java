@@ -15,16 +15,7 @@
  */
 package org.springframework.data.cassandra.mapping;
 
-import static org.springframework.cassandra.core.cql.CqlIdentifier.cqlId;
-
-import java.beans.PropertyDescriptor;
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-
+import com.datastax.driver.core.DataType;
 import org.springframework.cassandra.core.Ordering;
 import org.springframework.cassandra.core.PrimaryKeyType;
 import org.springframework.cassandra.core.cql.CqlIdentifier;
@@ -42,9 +33,13 @@ import org.springframework.data.util.ClassTypeInformation;
 import org.springframework.data.util.TypeInformation;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.util.Assert;
-import org.springframework.util.StringUtils;
 
-import com.datastax.driver.core.DataType;
+import java.beans.PropertyDescriptor;
+import java.lang.reflect.Field;
+import java.util.*;
+
+import static org.springframework.cassandra.core.cql.CqlIdentifier.cqlId;
+import static org.springframework.util.StringUtils.hasText;
 
 /**
  * Cassandra specific {@link org.springframework.data.mapping.model.AnnotationBasedPersistentProperty} implementation.
@@ -69,6 +64,11 @@ public class BasicCassandraPersistentProperty extends AnnotationBasedPersistentP
 	 * Whether this property has been explicitly instructed to force quote column names.
 	 */
 	protected Boolean forceQuote;
+	/**
+	 * An unmodifiable map of columnName-to-comment entries.
+	 * If a given column doesn't have comment, its collumnName will point to {@literal null} value.
+	 */
+	private Map<CqlIdentifier, String> columnComments;
 
 	/**
 	 * Creates a new {@link BasicCassandraPersistentProperty}.
@@ -331,7 +331,7 @@ public class BasicCassandraPersistentProperty extends AnnotationBasedPersistentP
 
 		String name = defaultName;
 
-		if (StringUtils.hasText(overriddenName)) {
+		if (hasText(overriddenName)) {
 			name = spelContext == null ? overriddenName : SpelUtils.evaluate(overriddenName, spelContext);
 		}
 
@@ -379,6 +379,67 @@ public class BasicCassandraPersistentProperty extends AnnotationBasedPersistentP
 
 		this.columnNames = this.explicitColumnNames = Collections
 				.unmodifiableList(new ArrayList<CqlIdentifier>(columnNames));
+	}
+
+	@Override
+	public String getColumnComment() {
+
+		Map<CqlIdentifier, String> columnComments = getColumnComments();
+		if (columnComments.size() == 1) {
+			return columnComments.values().iterator().next();
+		} else {
+			throw new IllegalStateException("property "+this+" does not have a single column mapping");
+		}
+	}
+
+	@Override
+	public Map<CqlIdentifier, String> getColumnComments() {
+
+		if (this.columnComments != null) {
+			return columnComments;
+		}
+
+		return this.columnComments = Collections.unmodifiableMap(determineColumnComments());
+	}
+
+	private Map<CqlIdentifier, String> determineColumnComments() {
+		Map<CqlIdentifier, String> comments = new HashMap<CqlIdentifier, String>();
+
+		if (isCompositePrimaryKey()) {
+			addCompositePrimaryKeyColumnComments(getCompositePrimaryKeyEntity(), comments);
+		} else if (isIdProperty()) {
+			String comment = textOrNull(findAnnotation(PrimaryKey.class).comment());
+			comments.put(getColumnName(), comment);
+		} else if (isPrimaryKeyColumn()) {
+			String comment = textOrNull(findAnnotation(PrimaryKeyColumn.class).comment());
+			comments.put(getColumnName(), comment);
+		} else {
+			Column anno = findAnnotation(Column.class);
+			String comment = anno != null ? textOrNull(anno.comment()) : null;
+			comments.put(getColumnName(), comment);
+		}
+
+		return comments;
+	}
+
+	private String textOrNull(String text) {
+		return hasText(text) ? text : null;
+	}
+
+	protected void addCompositePrimaryKeyColumnComments(CassandraPersistentEntity<?> compositePrimaryKeyEntity,
+			final Map<CqlIdentifier, String> columnComments) {
+
+		compositePrimaryKeyEntity.doWithProperties(new PropertyHandler<CassandraPersistentProperty>() {
+
+			@Override
+			public void doWithPersistentProperty(CassandraPersistentProperty p) {
+				if (p.isCompositePrimaryKey()) {
+					addCompositePrimaryKeyColumnComments(p.getCompositePrimaryKeyEntity(), columnComments);
+				} else {
+					columnComments.put(p.getColumnName(), p.getColumnComment());
+				}
+			}
+		});
 	}
 
 	@Override
