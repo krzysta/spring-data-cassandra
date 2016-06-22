@@ -28,10 +28,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.DefaultConversionService;
-import org.springframework.data.cassandra.mapping.BasicCassandraMappingContext;
-import org.springframework.data.cassandra.mapping.CassandraMappingContext;
-import org.springframework.data.cassandra.mapping.CassandraPersistentEntity;
-import org.springframework.data.cassandra.mapping.CassandraPersistentProperty;
+import org.springframework.data.cassandra.mapping.*;
 import org.springframework.data.cassandra.repository.MapId;
 import org.springframework.data.cassandra.repository.MapIdentifiable;
 import org.springframework.data.convert.EntityInstantiator;
@@ -259,7 +256,7 @@ public class MappingCassandraConverter extends AbstractCassandraConverter
 					return;
 				}
 
-				if (value != null) {
+				if (value != null || prop.isInsertNull()) {
 					log.debug("Adding insert.value [{}] - [{}]", prop.getColumnName().toCql(), value);
 					insert.value(prop.getColumnName().toCql(), value);
 				}

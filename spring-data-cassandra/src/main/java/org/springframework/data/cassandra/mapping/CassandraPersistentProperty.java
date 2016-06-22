@@ -147,7 +147,15 @@ public interface CassandraPersistentProperty extends PersistentProperty<Cassandr
 	 */
 	Map<CqlIdentifier, String> getColumnComments();
 
+	/**
+	 * Indicates that given column is discriminator between different types of the same entity.
+	 */
 	boolean isDiscriminator();
+	
+	/**
+	 * Indicates that given column null values should be inserted explicitly, not skipped.
+	 */
+	boolean isInsertNull();
 
 	public enum PropertyToFieldNameConverter implements Converter<CassandraPersistentProperty, String> {
 

@@ -61,4 +61,11 @@ public @interface Column {
 	 * A free-form, human-readable comment describing the column.
 	 */
 	String comment() default "";
+	
+	/**
+	 * If true indicates that column 'null' value should be inserted explicitly.
+	 * Default false will skip over column if its value is null.
+	 */
+	boolean insertNull() default false;
+	
 }

@@ -69,6 +69,11 @@ public class BasicCassandraPersistentProperty extends AnnotationBasedPersistentP
 	 * If a given column doesn't have comment, its collumnName will point to {@literal null} value.
 	 */
 	private Map<CqlIdentifier, String> columnComments;
+	
+	/**
+	 * If null value should be inserted or skipped.
+	 */
+	private Boolean insertNull;
 
 	/**
 	 * Creates a new {@link BasicCassandraPersistentProperty}.
@@ -494,4 +499,20 @@ public class BasicCassandraPersistentProperty extends AnnotationBasedPersistentP
 	protected Association<CassandraPersistentProperty> createAssociation() {
 		return new Association<CassandraPersistentProperty>(this, null);
 	}
+
+    @SuppressWarnings("boxing")
+    @Override
+    public boolean isInsertNull() {
+        if (insertNull == null) {
+            Column col = findAnnotation(Column.class);
+            if (col != null) {
+                insertNull = col.insertNull();
+            } else {
+                insertNull = false;
+            }
+        }
+        return insertNull;
+    }
+	
+	
 }
