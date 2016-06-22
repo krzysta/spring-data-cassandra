@@ -228,16 +228,8 @@
 
 	<repositories>
 		<repository>
-			<id>libs-snapshot</id>
-			<url>https://artifactory.otlabs.fr/artifactory/libs-snapshot</url>
-			<snapshots>true</snapshots>
-			<releases>false</releases>
-		</repository>
-		<repository>
-			<id>libs-releases</id>
-			<url>https://artifactory.otlabs.fr/artifactory/libs-release</url>
-			<snapshots>false</snapshots>
-			<releases>true</releases>
+			<id>spring-libs-snapshot</id>
+			<url>https://repo.spring.io/libs-snapshot</url>
 		</repository>
 	</repositories>
 
