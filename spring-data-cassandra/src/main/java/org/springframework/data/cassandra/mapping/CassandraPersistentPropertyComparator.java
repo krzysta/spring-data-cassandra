@@ -35,55 +35,39 @@ public enum CassandraPersistentPropertyComparator implements Comparator<Cassandr
 	@Override
 	public int compare(CassandraPersistentProperty left, CassandraPersistentProperty right) {
 
-		if (left != null && right == null) {
-			return 1;
-		}
-		if (left == null && right != null) {
-			return -1;
-		}
-		if (left == null && right == null) {
-			return 0;
-		}
-
-		if (left.equals(right)) {
-			return 0;
-		}
-		
-		// order id properties first
-		
-		boolean leftIsPkProp = left.isIdProperty() || left.isCompositePrimaryKey();
-        boolean rightIsPkProp = right.isIdProperty() || right.isCompositePrimaryKey();
-
-        int order;
-        if ((order = orderBool(leftIsPkProp, rightIsPkProp)) == 0) {
-    
-            // it might be composite key entity
-            
-    		boolean leftIsPkCol = left.isPrimaryKeyColumn();
-    		boolean rightIsPkCol = right.isPrimaryKeyColumn();
-    
-    		if ((order = orderBool(leftIsPkCol, rightIsPkCol)) == 0) {
-    		    
-    	        if (leftIsPkCol && rightIsPkCol) {
-                    return CassandraPrimaryKeyColumnAnnotationComparator.IT.compare(left.findAnnotation(PrimaryKeyColumn.class),
-                            right.findAnnotation(PrimaryKeyColumn.class));
-                }
-        
-        		// else, neither property is a composite primary key nor a primary key; compare @Column annotations
-        
-        		return left.getName().compareTo(right.getName());
-    		}
-        }
-		return order;
-	}
-
-    private int orderBool(boolean leftIsPkProp, boolean rightIsPkProp) {
-        if (leftIsPkProp && !rightIsPkProp) {
-            return -1;
-        } else if (!leftIsPkProp && rightIsPkProp) {
+        if (left != null && right == null) {
             return 1;
-        } else {
+        }
+        if (left == null && right != null) {
+            return -1;
+        }
+        if (left == null && right == null) {
             return 0;
         }
-    }
+
+        if (left.equals(right)) {
+            return 0;
+        }
+
+        boolean leftIsPrimaryKey = left.isPrimaryKeyColumn();
+        boolean rightIsPrimaryKey = right.isPrimaryKeyColumn();
+
+        if (leftIsPrimaryKey && rightIsPrimaryKey) {
+            return CassandraPrimaryKeyColumnAnnotationComparator.IT.compare(left.findAnnotation(PrimaryKeyColumn.class),
+                    right.findAnnotation(PrimaryKeyColumn.class));
+        }
+
+        if (leftIsPrimaryKey && !rightIsPrimaryKey) {
+            return -1;
+        }
+
+        if (!leftIsPrimaryKey && rightIsPrimaryKey) {
+            return 1;
+        }
+
+        // else, neither property is a composite primary key nor a primary key; compare @Column annotations
+
+        return left.getName().compareTo(right.getName());
+	}
+
 }
