@@ -50,6 +50,7 @@ import org.springframework.data.cassandra.convert.CassandraConverter;
 import org.springframework.data.cassandra.core.CassandraOperations;
 import org.springframework.data.repository.query.ParameterAccessor;
 import org.springframework.data.repository.query.RepositoryQuery;
+import org.springframework.data.util.TypeInformation;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 
@@ -142,6 +143,18 @@ public abstract class AbstractCassandraQuery implements RepositoryQuery {
 
 		if (method.isCollectionOfEntityQuery()) {
 			retval = getCollectionOfEntity(resultSet, declaredReturnType, returnedUnwrappedObjectType);
+		}
+		
+		
+		if (LTWTxResult.class.isAssignableFrom(method.getReturnedObjectType())) {
+		    if (resultSet.wasApplied()) {
+		        return LTWTxResult.ok();
+		    } else {
+		        TypeInformation<?> ltwType = method.getReturnType();
+		        TypeInformation<?> type = ltwType.getTypeArguments().get(0);
+		        Object entity = getSingleEntity(resultSet, type.getType());
+		        return LTWTxResult.offending(entity);
+		    }
 		}
 
 		// TODO: support Page & Slice queries
