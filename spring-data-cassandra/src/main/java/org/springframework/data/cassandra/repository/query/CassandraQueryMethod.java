@@ -1,25 +1,15 @@
 package org.springframework.data.cassandra.repository.query;
 
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Method;
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.net.InetAddress;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-
+import com.datastax.driver.core.ResultSet;
 import org.springframework.cassandra.core.cql.CqlIdentifier;
 import org.springframework.cassandra.core.cql.CqlStringUtils;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.data.cassandra.convert.CassandraConverter;
-import org.springframework.data.cassandra.mapping.*;
+import org.springframework.data.cassandra.mapping.CassandraMappingContext;
+import org.springframework.data.cassandra.mapping.CassandraPersistentEntity;
+import org.springframework.data.cassandra.mapping.CassandraType;
+import org.springframework.data.cassandra.mapping.TableDiscriminator;
 import org.springframework.data.cassandra.repository.Query;
 import org.springframework.data.projection.ProjectionFactory;
 import org.springframework.data.repository.core.RepositoryMetadata;
@@ -30,7 +20,13 @@ import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 
-import com.datastax.driver.core.ResultSet;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Array;
+import java.lang.reflect.Method;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.net.InetAddress;
+import java.util.*;
 
 public class CassandraQueryMethod extends QueryMethod {
 
@@ -38,13 +34,17 @@ public class CassandraQueryMethod extends QueryMethod {
 	public static final List<Class<?>> ALLOWED_PARAMETER_TYPES = Collections.unmodifiableList(Arrays
 			.asList(new Class<?>[] { String.class, CharSequence.class, char.class, Character.class, char[].class, long.class,
 					Long.class, boolean.class, Boolean.class, BigDecimal.class, BigInteger.class, double.class, Double.class,
-					float.class, Float.class, InetAddress.class, Date.class, UUID.class, int.class, Integer.class }));
+					float.class, Float.class, InetAddress.class, Date.class, UUID.class, int.class, Integer.class,
+					List.class, Set.class, Array.class }));
 
 	public static final List<Class<?>> STRING_LIKE_PARAMETER_TYPES = Collections.unmodifiableList(Arrays
 			.asList(new Class<?>[] { CharSequence.class, char.class, Character.class, char[].class }));
 
 	public static final List<Class<?>> DATE_PARAMETER_TYPES = Collections.unmodifiableList(Arrays
 			.asList(new Class<?>[] { Date.class }));
+
+	public static final List<Class<?>> COLLECTION_LIKE_PARAMETER_TYPES = Collections.unmodifiableList(Arrays
+			.asList(new Class<?>[] { List.class, Set.class, Array.class }));
 
 	public static boolean isMapOfCharSequenceToObject(TypeInformation<?> type) {
 
@@ -66,6 +66,7 @@ public class CassandraQueryMethod extends QueryMethod {
 	protected Set<Integer> stringLikeParameterIndexes = new HashSet<Integer>();
 	protected Set<Integer> dateParameterIndexes = new HashSet<Integer>();
 	protected Integer discriminatorParameterIndex ;
+	protected Map<Integer, Class<?>> collectionLikeParameterIndexes = new HashMap<Integer, Class<?>>();
 
 	public CassandraQueryMethod(Method method, RepositoryMetadata metadata, ProjectionFactory factory, CassandraMappingContext mappingContext) {
 
@@ -104,18 +105,36 @@ public class CassandraQueryMethod extends QueryMethod {
 				type = cnvAnn.type().asJavaClass();
 			}
 
+			// TODO: how about subtypes?
 			if (!ALLOWED_PARAMETER_TYPES.contains(type)) {
 				offendingTypes.add(type);
 			}
-			for (Class<?> quotedType : STRING_LIKE_PARAMETER_TYPES) {
-				if (quotedType.isAssignableFrom(type)) {
-					stringLikeParameterIndexes.add(i);
-				}
+
+
+			if (isStringLikeParameter(type)) {
+				stringLikeParameterIndexes.add(i);
 			}
-			for (Class<?> quotedType : DATE_PARAMETER_TYPES) {
-				if (quotedType.isAssignableFrom(type)) {
-					dateParameterIndexes.add(i);
+
+			if (isDateParameter(type)) {
+				dateParameterIndexes.add(i);
+			}
+
+			if (isCollectionLikeParameter(type)) {
+				/*
+				 * let's assume we require typeArguments to be present in annotation...
+				 * later on we could handle it the same way this class handles type.
+				 * typeArguments has length=1 for lists and length=2 for maps... we only handle lists here
+				 */
+				if (cnvAnn.typeArguments().length != 1) {
+					throw new IllegalArgumentException(String.format(
+							"encountered unsupported query parameter type%s [%s] in method %s: typeArguments property missing.",
+							offendingTypes.size() == 1 ? "" : "s",
+							StringUtils.arrayToCommaDelimitedString(new ArrayList<Class<?>>(offendingTypes).toArray()),
+							method));
 				}
+
+				Class<?> subtype = cnvAnn.typeArguments()[0].asJavaClass();
+				collectionLikeParameterIndexes.put(i, subtype);
 			}
 			i++;
 		}
@@ -217,16 +236,62 @@ public class CassandraQueryMethod extends QueryMethod {
 		return dateParameterIndexes.contains(parameterIndex);
 	}
 
+	public boolean isCollectionParameter(int parameterIndex) {
+		return collectionLikeParameterIndexes.keySet().contains(parameterIndex);
+	}
+
     public String convertParameterToCQL(int index, Object value, CassandraConverter converter) {
         if (isStringLikeParameter(index)) {
                 String string = converter.getConversionService().convert(value, String.class);
                 return "'" + CqlStringUtils.escapeSingle(string) + "'";
         } else if (isDateParameter(index)) {
-                Date date = converter.getConversionService().convert(value, Date.class);
-                return "" + date.getTime();
+            Date date = converter.getConversionService().convert(value, Date.class);
+            return "" + date.getTime();
+        } else if (isCollectionParameter(index)) {
+            Collection<?> collection = Collection.class.cast(value instanceof Array ? Arrays.asList((Object[]) value) : value);
+
+            String[] vals = new String[collection.size()];
+
+            int i = 0;
+            Class<?> argType = collectionLikeParameterIndexes.get(index);
+
+            for (Object o : collection) {
+                if (isStringLikeParameter(argType)) {
+                    String string = converter.getConversionService().convert(o, String.class);
+                    vals[i] = "'" + CqlStringUtils.escapeSingle(string) + "'";
+                } else if (isDateParameter(argType)) {
+                    Date date = converter.getConversionService().convert(o, Date.class);
+                    vals[i] = "" + date.getTime();
+                } else {
+                    vals[i] = o.toString();
+                }
+                i++;
+            }
+            return StringUtils.arrayToCommaDelimitedString(vals);
         } else {
                 return value.toString();
         }
+    }
+
+    private boolean isDateParameter(Class<?> type) {
+        return containsType(DATE_PARAMETER_TYPES, type);
+    }
+
+    private boolean isStringLikeParameter(Class<?> type) {
+        return containsType(STRING_LIKE_PARAMETER_TYPES, type);
+    }
+
+    private boolean isCollectionLikeParameter(Class<?> type) {
+        return containsType(COLLECTION_LIKE_PARAMETER_TYPES, type);
+    }
+
+    private boolean containsType(List<Class<?>> typesCollection, Class<?> type) {
+        for (Class<?> quotedType : typesCollection) {
+            if (quotedType.isAssignableFrom(type)) {
+                return true;
+            }
+        }
+        return false;
     }
 
 	public String resolveTableName(CassandraParameterAccessor accessor){
