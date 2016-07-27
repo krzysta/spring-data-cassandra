@@ -21,15 +21,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.cassandra.core.AsynchronousQueryListener;
-import org.springframework.cassandra.core.Cancellable;
-import org.springframework.cassandra.core.CqlOperations;
-import org.springframework.cassandra.core.CqlTemplate;
-import org.springframework.cassandra.core.QueryForObjectListener;
-import org.springframework.cassandra.core.QueryOptions;
-import org.springframework.cassandra.core.SessionCallback;
-import org.springframework.cassandra.core.WriteOptions;
-
+import org.springframework.cassandra.core.*;
 import org.springframework.cassandra.core.cql.CqlIdentifier;
 import org.springframework.cassandra.core.util.CollectionUtils;
 import org.springframework.core.convert.ConversionService;
@@ -41,6 +33,7 @@ import org.springframework.data.cassandra.convert.MappingCassandraConverter;
 import org.springframework.data.cassandra.mapping.CassandraMappingContext;
 import org.springframework.data.cassandra.mapping.CassandraPersistentEntity;
 import org.springframework.data.cassandra.mapping.CassandraPersistentProperty;
+import org.springframework.data.cassandra.repository.query.LTWTxResult;
 import org.springframework.data.convert.EntityWriter;
 import org.springframework.data.mapping.PersistentPropertyAccessor;
 import org.springframework.data.mapping.PropertyHandler;
@@ -51,6 +44,7 @@ import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.ResultSetFuture;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
+import com.datastax.driver.core.exceptions.DriverException;
 import com.datastax.driver.core.querybuilder.*;
 import com.datastax.driver.core.querybuilder.Delete.Where;
 import com.google.common.base.Function;
@@ -122,7 +116,7 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 		Assert.notNull(type);
 		Assert.notNull(id);
 
-		CassandraPersistentEntity<?> entity = mappingContext.getPersistentEntity(type);
+		CassandraPersistentEntity<?> entity = getEntity(type);
 
 		Select select = QueryBuilder.select().countAll().from(getTableName(type, id).toCql());
 		appendIdCriteria(select.where(), entity, id);
@@ -134,7 +128,7 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 
 	@Override
 	public long count(Class<?> type) {
-		List<CqlIdentifier> tableNames = mappingContext.getPersistentEntity(type).getEntityDiscriminator().getTableNames();
+		List<CqlIdentifier> tableNames = getEntity(type).getEntityDiscriminator().getTableNames();
 		long count=0;
 		for (CqlIdentifier tableName : tableNames) {
 			count+=count(tableName.toCql());
@@ -157,7 +151,7 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 		Assert.notNull(type);
 		Assert.notNull(id);
 
-		CassandraPersistentEntity<?> entity = mappingContext.getPersistentEntity(type);
+		CassandraPersistentEntity<?> entity = getEntity(type);
 
 		Delete delete = QueryBuilder.delete().from(getTableName(type, id).toCql());
 		appendIdCriteria(delete.where(), entity, id);
@@ -217,7 +211,7 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 
 	@Override
 	public CqlIdentifier getTableName(Class<?> type) {
-		CassandraPersistentEntity<?> entity = mappingContext.getPersistentEntity(type);
+		CassandraPersistentEntity<?> entity = getEntity(type);
 		if (entity.getEntityDiscriminator().isMultitable()){
 			throw new UnsupportedOperationException("Entity "+entity.getName()+" is multitable");
 		}
@@ -243,6 +237,21 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 	public <T> T insert(T entity, WriteOptions options) {
 		return doInsert(entity, options);
 	}
+
+    @Override
+    public <T> LTWTxResult<T> insertIfNotExists(T entity, WriteOptions options) {
+        return doInsertIfNotExists(entity, options);
+    }
+
+    @Override
+    public <T> LTWTxResult<T> updateIf(T entity, Map<String, Object> updateConditions, WriteOptions options) {
+        return doUpdateIf(entity, updateConditions, options);
+    }
+    
+    @Override
+    public <T> LTWTxResult<T> updateIf(T entity, Map<String, Object> updateConditions) {
+        return updateIf(entity, updateConditions, null);
+    }
 
 	/**
 	 * @deprecated See {@link CassandraTemplate#insertAsynchronously(List)}
@@ -315,7 +324,7 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 
 	@Override
 	public <T> List<T> selectAll(Class<T> type) {
-		List<CqlIdentifier> tableNames = mappingContext.getPersistentEntity(type).getEntityDiscriminator().getTableNames();
+		List<CqlIdentifier> tableNames = getEntity(type).getEntityDiscriminator().getTableNames();
 		List<T> result = new ArrayList<T>();
 		for (CqlIdentifier tableName : tableNames) {
 			result.addAll(select(QueryBuilder.select().all().from(tableName.toCql()), type));
@@ -343,7 +352,7 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 	@Override
 	public <T> List<T> selectBySimpleIds(Class<T> type, Iterable<?> ids) {
 
-		CassandraPersistentEntity<?> entity = mappingContext.getPersistentEntity(type);
+		CassandraPersistentEntity<?> entity = getEntity(type);
 
 		CassandraPersistentProperty idProperty = entity.getIdProperty();
                 if (idProperty.isCompositePrimaryKey() && idProperty.getCompositePrimaryKeyProperties().size() > 1) {
@@ -386,7 +395,7 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 		Assert.notNull(type);
 		Assert.notNull(id);
 
-		CassandraPersistentEntity<?> entity = mappingContext.getPersistentEntity(type);
+		CassandraPersistentEntity<?> entity = getEntity(type);
 		if (entity == null) {
 			throw new IllegalArgumentException(String.format("unknown entity class [%s]", type.getName()));
 		}
@@ -699,6 +708,49 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 		execute(insert);
 		return entity;
 	}
+
+    protected <T> LTWTxResult<T> doInsertIfNotExists(final T obj, WriteOptions options) {
+        Assert.notNull(obj);
+        Insert insert = createInsertQuery(getTableName(obj).toCql(), obj, options, cassandraConverter);
+        insert.ifNotExists();
+        return ltwTxResult(obj, execute(insert));
+                
+    }
+
+    private <T> LTWTxResult<T> ltwTxResult(final T obj, ResultSet resultSet) {
+        if (resultSet.wasApplied()) {
+            return LTWTxResult.ok();
+        } else {
+            T offending = processOne(resultSet, new RowMapper<T>() {
+                
+                @Override
+                public T mapRow(Row row, int rowNum) throws DriverException {
+                    return (T) cassandraConverter.read(obj.getClass(), row);
+                }
+            });
+            return LTWTxResult.offending(offending);
+        }
+    }
+    
+
+    protected <T> LTWTxResult<T> doUpdateIf(T object, Map<String, Object> updateConditions, WriteOptions options) {
+
+        Assert.notNull(object);
+        Update update = createUpdateQuery(getTableName(object).toCql(), object, options, cassandraConverter);
+        
+        @SuppressWarnings("unchecked")
+        CassandraPersistentEntity<T> entity = (CassandraPersistentEntity<T>) getEntity(object.getClass());
+        for(Map.Entry<String, Object> entry :  updateConditions.entrySet()) {
+            CassandraPersistentProperty persistentProperty = entity.getPersistentProperty(entry.getKey());
+            if (persistentProperty == null) {
+                throw new IllegalArgumentException("Property "+entry.getKey()+" not found on "+entity.getName());
+            }
+            update.onlyIf(QueryBuilder.eq(persistentProperty.getColumnName().toCql(), entry.getValue()));
+        }
+        
+        return ltwTxResult(object, execute(update));
+    }
+
 
 	protected <T> Cancellable doInsertAsync(final T entity, final WriteListener<T> listener, WriteOptions options) {
 
@@ -1060,7 +1112,7 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 			throw new IllegalArgumentException(String.format("unknown persistent entity class [%s]", clazz.getName()));
 		}
 
-		CassandraPersistentEntity<?> persistentEntity = mappingContext.getPersistentEntity(clazz);
+		CassandraPersistentEntity<?> persistentEntity = getEntity(clazz);
 		for (CqlIdentifier tableName : persistentEntity.getEntityDiscriminator().getTableNames()) {
 			truncate(tableName);
 		}
@@ -1138,13 +1190,17 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
         }
 
 	private CqlIdentifier getTableName(Class<?> type, Object id) {
-		CassandraPersistentEntity<?> entity = mappingContext.getPersistentEntity(type);
+		CassandraPersistentEntity<?> entity = getEntity(type);
 		return entity.getEntityDiscriminator().getTableNameForId(id);
 	}
 
-	private CqlIdentifier getTableName(Object type) {
-		CassandraPersistentEntity<Object> entity = (CassandraPersistentEntity<Object>) mappingContext.getPersistentEntity(type.getClass());
-		return entity.getEntityDiscriminator().getTableNameFor(type);
+	private CqlIdentifier getTableName(Object obj) {
+		CassandraPersistentEntity<Object> entity = getEntity(obj.getClass());
+		return entity.getEntityDiscriminator().getTableNameFor(obj);
 	}
+
+    private <T> CassandraPersistentEntity<T> getEntity(Class<? extends T> type) {
+        return (CassandraPersistentEntity<T>) mappingContext.getPersistentEntity(type);
+    }
 
 }

@@ -16,6 +16,7 @@
 package org.springframework.data.cassandra.core;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.cassandra.core.CqlOperations;
 import org.springframework.cassandra.core.Cancellable;
@@ -24,6 +25,7 @@ import org.springframework.cassandra.core.QueryOptions;
 import org.springframework.cassandra.core.WriteOptions;
 import org.springframework.cassandra.core.cql.CqlIdentifier;
 import org.springframework.data.cassandra.convert.CassandraConverter;
+import org.springframework.data.cassandra.repository.query.LTWTxResult;
 
 import com.datastax.driver.core.querybuilder.Select;
 
@@ -145,6 +147,15 @@ public interface CassandraOperations extends CqlOperations {
 	<T> T insert(T entity, WriteOptions options);
 
 	/**
+     * Insert the given entity if it does not yet exist.
+     * 
+     * @param entity The entity to insert
+     * @param options The {@link WriteOptions} to use.
+     * @return The result of lightweight transaction (with offending row if it was not applied)
+     */
+    <T> LTWTxResult<T> insertIfNotExists(T entity, WriteOptions options);
+
+	/**
 	 * Insert the given list of entities.
 	 * 
 	 * @param entities The entities to insert.
@@ -263,6 +274,25 @@ public interface CassandraOperations extends CqlOperations {
 	 * @return The entity given
 	 */
 	<T> T update(T entity, WriteOptions options);
+
+	/**
+     * Update the given entity if it fulfills given conditions.
+     * 
+     * @param entity The entity to update
+     * @param updateConditions conditions to check
+     * @return The entity given
+     */
+    <T> LTWTxResult<T> updateIf(T entity, Map<String, Object> updateConditions);
+
+    /**
+     * Update the given entity if it fulfills given conditions.
+     * 
+     * @param entity The entity to update
+     * @param updateConditions conditions to check 
+     * @param options The {@link WriteOptions} to use.
+     * @return The entity given
+     */
+    <T> LTWTxResult<T> updateIf(T entity, Map<String, Object> updateConditions, WriteOptions options);
 
 	/**
 	 * Update the given list of entities.
@@ -477,4 +507,5 @@ public interface CassandraOperations extends CqlOperations {
 	 */
 	@Deprecated
 	<T> List<T> selectAll(Class<T> type);
+
 }

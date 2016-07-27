@@ -1204,28 +1204,28 @@ public class CqlTemplate extends CassandraAccessor implements CqlOperations {
 	}
 
 	@Override
-	public void execute(Delete delete) throws DataAccessException {
-		doExecute(delete);
+	public ResultSet execute(Delete delete) throws DataAccessException {
+		return doExecute(delete);
 	}
 
 	@Override
-	public void execute(Insert insert) throws DataAccessException {
-		doExecute(insert);
+	public ResultSet execute(Insert insert) throws DataAccessException {
+	    return doExecute(insert);
 	}
 
 	@Override
-	public void execute(Update update) throws DataAccessException {
-		doExecute(update);
+	public ResultSet execute(Update update) throws DataAccessException {
+	    return doExecute(update);
 	}
 
 	@Override
-	public void execute(Batch batch) throws DataAccessException {
-		doExecute(batch);
+	public ResultSet execute(Batch batch) throws DataAccessException {
+	    return doExecute(batch);
 	}
 
 	@Override
-	public void execute(Truncate truncate) throws DataAccessException {
-		doExecute(truncate);
+	public ResultSet execute(Truncate truncate) throws DataAccessException {
+	    return doExecute(truncate);
 	}
 
 	@Override

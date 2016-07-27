@@ -117,36 +117,41 @@ public interface CqlOperations {
 	 * Executes the supplied Delete Query and returns nothing.
 	 * 
 	 * @param query The {@link Delete} to execute
+	 * @return 
 	 */
-	void execute(Delete delete) throws DataAccessException;
+	ResultSet execute(Delete delete) throws DataAccessException;
 
 	/**
 	 * Executes the supplied Insert Query and returns nothing.
 	 * 
 	 * @param query The {@link Insert} to execute
+	 * @return 
 	 */
-	void execute(Insert insert) throws DataAccessException;
+	ResultSet execute(Insert insert) throws DataAccessException;
 
 	/**
 	 * Executes the supplied Update Query and returns nothing.
 	 * 
 	 * @param query The {@link Update} to execute
+	 * @return 
 	 */
-	void execute(Update update) throws DataAccessException;
+	ResultSet execute(Update update) throws DataAccessException;
 
 	/**
 	 * Executes the supplied Batch Query and returns nothing.
 	 * 
 	 * @param query The {@link Batch} to execute
+	 * @return 
 	 */
-	void execute(Batch batch) throws DataAccessException;
+	ResultSet execute(Batch batch) throws DataAccessException;
 
 	/**
 	 * Executes the supplied Truncate Query and returns nothing.
 	 * 
 	 * @param query The {@link Truncate} to execute
+	 * @return 
 	 */
-	void execute(Truncate truncate) throws DataAccessException;
+	ResultSet execute(Truncate truncate) throws DataAccessException;
 
 	/**
 	 * Executes the supplied Query Asynchronously and returns nothing.

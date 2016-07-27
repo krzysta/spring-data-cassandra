@@ -16,11 +16,14 @@
 package org.springframework.data.cassandra.repository;
 
 import java.io.Serializable;
+import java.util.Map;
 
+import org.springframework.cassandra.core.WriteOptions;
 import org.springframework.data.cassandra.mapping.PrimaryKey;
 import org.springframework.data.cassandra.mapping.PrimaryKeyClass;
 import org.springframework.data.cassandra.mapping.PrimaryKeyColumn;
 import org.springframework.data.cassandra.mapping.Table;
+import org.springframework.data.cassandra.repository.query.LTWTxResult;
 import org.springframework.data.cassandra.repository.support.BasicMapId;
 import org.springframework.data.domain.Persistable;
 import org.springframework.data.repository.CrudRepository;
@@ -66,4 +69,16 @@ import org.springframework.data.repository.NoRepositoryBean;
  * @author Matthew T. Adams
  */
 @NoRepositoryBean
-public interface TypedIdCassandraRepository<T, ID extends Serializable> extends CrudRepository<T, ID> {}
+public interface TypedIdCassandraRepository<T, ID extends Serializable> extends CrudRepository<T, ID> {
+    
+    <S extends T> LTWTxResult<S> saveIfNotExists(S obj);
+    
+    <S extends T> LTWTxResult<S> saveIfNotExists(S obj, WriteOptions writeOptions);
+
+    <S extends T> S save(S obj, WriteOptions writeOptions);
+
+    <S extends T> LTWTxResult<S> updateIf(S ent, Map<String, Object> updateConditions);
+    
+    <S extends T> LTWTxResult<S> updateIf(S ent, Map<String, Object> updateConditions, WriteOptions writeOptions);
+    
+}

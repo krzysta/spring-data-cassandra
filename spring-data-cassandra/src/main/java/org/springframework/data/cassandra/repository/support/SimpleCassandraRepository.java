@@ -17,12 +17,15 @@ package org.springframework.data.cassandra.repository.support;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Map;
 
+import org.springframework.cassandra.core.WriteOptions;
 import org.springframework.cassandra.core.util.CollectionUtils;
 import org.springframework.data.cassandra.core.CassandraOperations;
 import org.springframework.data.cassandra.core.CassandraTemplate;
 import org.springframework.data.cassandra.repository.TypedIdCassandraRepository;
 import org.springframework.data.cassandra.repository.query.CassandraEntityInformation;
+import org.springframework.data.cassandra.repository.query.LTWTxResult;
 import org.springframework.util.Assert;
 
 import com.datastax.driver.core.querybuilder.Select;
@@ -58,6 +61,31 @@ public class SimpleCassandraRepository<T, ID extends Serializable> implements Ty
 	public <S extends T> S save(S entity) {
 		return operations.insert(entity);
 	}
+	
+	@Override
+    public <S extends T> S save(S entity, WriteOptions writeOptions) {
+        return operations.insert(entity, writeOptions);
+    }
+
+    @Override
+    public <S extends T> LTWTxResult<S>  updateIf(S entity, Map<String, Object> updateConditions) {
+        return operations.updateIf(entity, updateConditions);
+    }
+    
+    @Override
+    public <S extends T> LTWTxResult<S>  updateIf(S entity, Map<String, Object> updateConditions, WriteOptions writeOptions) {
+        return operations.updateIf(entity, updateConditions, writeOptions);
+    }
+
+	@Override
+    public <S extends T> LTWTxResult<S> saveIfNotExists(S entity) {
+        return operations.insertIfNotExists(entity, null);
+    }
+	
+    @Override
+    public <S extends T> LTWTxResult<S> saveIfNotExists(S entity, WriteOptions writeOptions) {
+        return operations.insertIfNotExists(entity, writeOptions);
+    }
 
 	@Override
 	public <S extends T> List<S> save(Iterable<S> entities) {
@@ -112,4 +140,5 @@ public class SimpleCassandraRepository<T, ID extends Serializable> implements Ty
 	protected List<T> findAll(Select query) {
 		return operations.select(query, entityInformation.getJavaType());
 	}
+
 }
