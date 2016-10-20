@@ -45,9 +45,11 @@
 			<artifactId>spring-data-commons</artifactId>
 			<version>${springdata.commons}</version>
 		</dependency>
+
+
 		<dependency>
 			<groupId>com.datastax.cassandra</groupId>
-			<artifactId>cassandra-driver-dse</artifactId>
+			<artifactId>cassandra-driver-core</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>javax.enterprise</groupId>

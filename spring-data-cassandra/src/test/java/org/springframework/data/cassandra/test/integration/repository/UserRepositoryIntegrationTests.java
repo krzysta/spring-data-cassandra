@@ -15,24 +15,16 @@
  */
 package org.springframework.data.cassandra.test.integration.repository;
 
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.hasItems;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-
-import org.apache.cassandra.thrift.Cassandra.AsyncProcessor.add;
+import com.google.common.collect.Lists;
 import org.junit.Assert;
 import org.springframework.data.cassandra.core.CassandraOperations;
+import org.springframework.data.cassandra.test.integration.repository.simple.User;
 
-import com.google.common.collect.Lists;
+import java.util.*;
+
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests for {@link UserRepository}.

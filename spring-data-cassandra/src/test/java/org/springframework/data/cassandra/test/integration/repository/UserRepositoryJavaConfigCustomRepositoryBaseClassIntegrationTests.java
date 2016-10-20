@@ -15,11 +15,6 @@
  */
 package org.springframework.data.cassandra.test.integration.repository;
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
-
-import java.io.Serializable;
-
 import org.junit.Test;
 import org.springframework.aop.framework.Advised;
 import org.springframework.context.annotation.Configuration;
@@ -27,8 +22,15 @@ import org.springframework.data.cassandra.core.CassandraOperations;
 import org.springframework.data.cassandra.repository.config.EnableCassandraRepositories;
 import org.springframework.data.cassandra.repository.query.CassandraEntityInformation;
 import org.springframework.data.cassandra.repository.support.SimpleCassandraRepository;
+import org.springframework.data.cassandra.test.integration.repository.simple.User;
 import org.springframework.data.cassandra.test.integration.support.IntegrationTestConfig;
 import org.springframework.test.context.ContextConfiguration;
+
+import java.io.Serializable;
+
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
 
 /**
  * Java config tests for {@link UserRepository}.

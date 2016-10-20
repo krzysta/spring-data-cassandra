@@ -1,16 +1,16 @@
 package org.springframework.data.cassandra.convert;
 
-import java.util.List;
-
-import org.springframework.cassandra.core.cql.CqlIdentifier;
-
+import com.datastax.driver.core.CodecRegistry;
 import com.datastax.driver.core.ColumnDefinitions;
 import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.Row;
+import org.springframework.cassandra.core.cql.CqlIdentifier;
+
+import java.util.List;
 
 /**
  * Helpful class to read a column's value from a row, with possible type conversion.
- * 
+ *
  * @author Matthew T. Adams
  */
 public class ColumnReader {
@@ -50,15 +50,15 @@ public class ColumnReader {
 
 			List<DataType> collectionTypes = type.getTypeArguments();
 			if (collectionTypes.size() == 2) {
-				return row.getMap(i, collectionTypes.get(0).asJavaClass(), collectionTypes.get(1).asJavaClass());
+				return row.getMap(i, CodecRegistry.DEFAULT_INSTANCE.codecFor(collectionTypes.get(0)).getJavaType().getRawType(), CodecRegistry.DEFAULT_INSTANCE.codecFor(collectionTypes.get(1)).getJavaType().getRawType());
 			}
 
 			if (type.equals(DataType.list(collectionTypes.get(0)))) {
-				return row.getList(i, collectionTypes.get(0).asJavaClass());
+				return row.getList(i, CodecRegistry.DEFAULT_INSTANCE.codecFor(collectionTypes.get(0)).getJavaType().getRawType());
 			}
 
 			if (type.equals(DataType.set(collectionTypes.get(0)))) {
-				return row.getSet(i, collectionTypes.get(0).asJavaClass());
+				return row.getSet(i, CodecRegistry.DEFAULT_INSTANCE.codecFor(collectionTypes.get(0)).getJavaType().getRawType());
 			}
 
 			throw new IllegalStateException("Unknown Collection type encountered.  Valid collections are Set, List and Map.");
@@ -89,7 +89,7 @@ public class ColumnReader {
 			return new Boolean(row.getBool(i));
 		}
 		if (type.equals(DataType.timestamp())) {
-			return row.getDate(i);
+			return row.getTimestamp(i);
 		}
 		if (type.equals(DataType.blob())) {
 			return row.getBytes(i);
@@ -110,7 +110,7 @@ public class ColumnReader {
 
 	/**
 	 * Returns the row's column value as an instance of the given type.
-	 * 
+	 *
 	 * @throws ClassCastException if the value cannot be converted to the requested type.
 	 */
 	public <T> T get(CqlIdentifier name, Class<T> requestedType) {
@@ -119,7 +119,7 @@ public class ColumnReader {
 
 	/**
 	 * Returns the row's column value as an instance of the given type.
-	 * 
+	 *
 	 * @throws ClassCastException if the value cannot be converted to the requested type.
 	 */
 	public <T> T get(String name, Class<T> requestedType) {
@@ -128,7 +128,7 @@ public class ColumnReader {
 
 	/**
 	 * Returns the row's column value as an instance of the given type.
-	 * 
+	 *
 	 * @throws ClassCastException if the value cannot be converted to the requested type.
 	 */
 	@SuppressWarnings("unchecked")

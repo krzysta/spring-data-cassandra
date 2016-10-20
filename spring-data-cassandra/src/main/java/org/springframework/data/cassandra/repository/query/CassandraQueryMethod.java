@@ -1,6 +1,7 @@
 package org.springframework.data.cassandra.repository.query;
 
-import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.*;
+import com.datastax.driver.core.DataType.Name;
 import org.springframework.cassandra.core.cql.CqlIdentifier;
 import org.springframework.cassandra.core.cql.CqlStringUtils;
 import org.springframework.core.annotation.AnnotationUtils;
@@ -26,6 +27,7 @@ import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.InetAddress;
+import java.nio.ByteBuffer;
 import java.util.*;
 
 public class CassandraQueryMethod extends QueryMethod {
@@ -45,6 +47,37 @@ public class CassandraQueryMethod extends QueryMethod {
 
 	public static final List<Class<?>> COLLECTION_LIKE_PARAMETER_TYPES = Collections.unmodifiableList(Arrays
 			.asList(new Class<?>[] { List.class, Set.class, Array.class }));
+
+	private static Map<Name, Class<?>> dataTypeToClassMap = new HashMap<Name, Class<?>>();
+
+	static {
+		dataTypeToClassMap.put(Name.ASCII, String.class);
+		dataTypeToClassMap.put(Name.BIGINT, Long.class);
+		dataTypeToClassMap.put(Name.BLOB, ByteBuffer.class);
+		dataTypeToClassMap.put(Name.BOOLEAN, Boolean.class);
+		dataTypeToClassMap.put(Name.COUNTER, Long.class);
+		dataTypeToClassMap.put(Name.DECIMAL, BigDecimal.class);
+		dataTypeToClassMap.put(Name.DOUBLE, Double.class);
+		dataTypeToClassMap.put(Name.FLOAT, Float.class);
+		dataTypeToClassMap.put(Name.INET, InetAddress.class);
+		dataTypeToClassMap.put(Name.INT, Integer.class);
+		dataTypeToClassMap.put(Name.TEXT, String.class);
+		dataTypeToClassMap.put(Name.TIMESTAMP, Date.class);
+		dataTypeToClassMap.put(Name.UUID, UUID.class);
+		dataTypeToClassMap.put(Name.VARCHAR, String.class);
+		dataTypeToClassMap.put(Name.VARINT, BigInteger.class);
+		dataTypeToClassMap.put(Name.TIMEUUID, UUID.class);
+		dataTypeToClassMap.put(Name.LIST, List.class);
+		dataTypeToClassMap.put(Name.SET, Set.class);
+		dataTypeToClassMap.put(Name.MAP, Map.class);
+		dataTypeToClassMap.put(Name.UDT, UDTValue.class);
+		dataTypeToClassMap.put(Name.TUPLE, TupleValue.class);
+		dataTypeToClassMap.put(Name.CUSTOM, ByteBuffer.class);
+		dataTypeToClassMap.put(Name.DATE, LocalDate.class);
+		dataTypeToClassMap.put(Name.TIME, Long.class);
+		dataTypeToClassMap.put(Name.SMALLINT, Short.class);
+		dataTypeToClassMap.put(Name.TINYINT, Byte.class);
+	}
 
 	public static boolean isMapOfCharSequenceToObject(TypeInformation<?> type) {
 
@@ -102,7 +135,7 @@ public class CassandraQueryMethod extends QueryMethod {
 				cnvAnn = type.getAnnotation(CassandraType.class);
 			}
 			if (cnvAnn != null) {
-				type = cnvAnn.type().asJavaClass();
+				type = dataTypeToClassMap.get(cnvAnn.type());
 			}
 
 			// TODO: how about subtypes?
@@ -133,7 +166,7 @@ public class CassandraQueryMethod extends QueryMethod {
 							method));
 				}
 
-				Class<?> subtype = cnvAnn.typeArguments()[0].asJavaClass();
+				Class<?> subtype = dataTypeToClassMap.get(cnvAnn.typeArguments()[0]);
 				collectionLikeParameterIndexes.put(i, subtype);
 			}
 			i++;
