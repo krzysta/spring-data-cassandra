@@ -37,20 +37,21 @@
 		<dist.id>spring-data-cassandra</dist.id>
 		<springdata.commons>1.12.1.OT.BUILD</springdata.commons>		
 		<cassandra-unit.version>2.1.9.2</cassandra-unit.version>
-		<cassandra-driver-dse.version>2.1.7.1</cassandra-driver-dse.version>
+		<cassandra-driver-dse.version>3.0.0-rc1</cassandra-driver-dse.version>
 		<el.version>1.0</el.version>
 		<failsafe.version>2.16</failsafe.version>
 		<jamm.version>0.3.1</jamm.version>
-		<cassandra.version>2.1.11</cassandra.version>
-		
+		<cassandra.version>3.0.0</cassandra.version>
 
+		<build.cassandra.host>localhost</build.cassandra.host>
+		<build.cassandra.mode>embedded</build.cassandra.mode>
 		<build.cassandra.native_transport_port>9042</build.cassandra.native_transport_port>
 		<build.cassandra.rpc_port>9043</build.cassandra.rpc_port>
 		<build.cassandra.storage_port>9044</build.cassandra.storage_port>
 		<build.cassandra.ssl_storage_port>9045</build.cassandra.ssl_storage_port>
 
 		<release.maven.plugin.version>2.5.3</release.maven.plugin.version>
-		<guava>16.0.1</guava>
+		<guava>19.0</guava>
 	</properties>
 
 	<developers>
@@ -93,28 +94,27 @@
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
+				<groupId>ch.qos.logback</groupId>
+				<artifactId>logback-core</artifactId>
+				<version>1.1.7</version>
+			</dependency>
+
+			<dependency>
 				<groupId>com.datastax.cassandra</groupId>
-				<artifactId>cassandra-driver-dse</artifactId>
-				<version>${cassandra-driver-dse.version}</version>
+				<artifactId>cassandra-driver-core</artifactId>
+				<version>3.1.2</version>
 				<exclusions>
 					<exclusion>
-						<artifactId>slf4j-log4j12</artifactId>
-						<groupId>org.slf4j</groupId>
-					</exclusion>
-					<exclusion>
-						<artifactId>log4j</artifactId>
-						<groupId>log4j</groupId>
-					</exclusion>
-					<exclusion>
-						<artifactId>guava</artifactId>
-						<groupId>com.google.guava</groupId>
-					</exclusion>
-					<exclusion>
-						<artifactId>netty-handler</artifactId>
 						<groupId>io.netty</groupId>
+						<artifactId>netty-handler</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>com.google.guava</groupId>
+						<artifactId>guava</artifactId>
 					</exclusion>
 				</exclusions>
 			</dependency>
+
 			<dependency>
 				<groupId>com.github.jbellis</groupId>
 				<artifactId>jamm</artifactId>
@@ -241,10 +241,6 @@
 	</pluginRepositories>
 
 	<dependencies>
-		<dependency>
-			<groupId>com.datastax.cassandra</groupId>
-			<artifactId>cassandra-driver-dse</artifactId>
-		</dependency>
 		<dependency>
 			<groupId>com.github.jbellis</groupId>
 			<artifactId>jamm</artifactId>

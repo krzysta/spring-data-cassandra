@@ -1,19 +1,15 @@
 package org.springframework.data.cassandra.convert;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
+import com.datastax.driver.core.CodecRegistry;
+import com.datastax.driver.core.DataType;
+import com.datastax.driver.core.DataType.Name;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.data.cassandra.mapping.CassandraPersistentProperty;
 import org.springframework.data.mapping.PersistentProperty;
 import org.springframework.data.mapping.PersistentPropertyAccessor;
 import org.springframework.data.mapping.model.ConvertingPropertyAccessor;
 
-import com.datastax.driver.core.DataType;
-import com.datastax.driver.core.DataType.Name;
+import java.util.*;
 
 public class CassandraConvertingPropertyAccessor extends ConvertingPropertyAccessor {
 
@@ -33,7 +29,7 @@ public class CassandraConvertingPropertyAccessor extends ConvertingPropertyAcces
 
     @SuppressWarnings("unchecked")
     private <T> T convert(Object source, DataType dt) {
-        return (T) convert(source, dt.asJavaClass());
+        return (T) convert(source, CodecRegistry.DEFAULT_INSTANCE.codecFor(dt).getJavaType().getRawType());
     }
 
     @SuppressWarnings("unchecked")
@@ -50,10 +46,13 @@ public class CassandraConvertingPropertyAccessor extends ConvertingPropertyAcces
                 List<DataType> typeArgs = dt.getTypeArguments();
         
                 if ((dt.getName() == Name.LIST || dt.getName() == Name.SET) && value instanceof Collection) {
-                    return convert(convertCol((Collection) value, typeArgs.get(0).asJavaClass()), dt);
+                    return convert(convertCol((Collection) value,
+                            CodecRegistry.DEFAULT_INSTANCE.codecFor(typeArgs.get(0)).getJavaType().getRawType()), dt);
                 } else if ((dt.getName() == Name.MAP) && value instanceof Map) {
                     return convert(
-                            convertMap((Map) value, typeArgs.get(0).asJavaClass(), typeArgs.get(1).asJavaClass()),
+                            convertMap((Map) value,
+                                    CodecRegistry.DEFAULT_INSTANCE.codecFor(typeArgs.get(0)).getJavaType().getRawType(),
+                                    CodecRegistry.DEFAULT_INSTANCE.codecFor(typeArgs.get(1)).getJavaType().getRawType()),
                             dt);
                 } else {
                     return convert(value, dt);

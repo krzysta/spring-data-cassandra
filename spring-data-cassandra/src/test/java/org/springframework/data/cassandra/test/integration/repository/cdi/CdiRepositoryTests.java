@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 the original author or authors.
+ * Copyright 2014-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,43 +25,56 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.springframework.cassandra.test.integration.AbstractEmbeddedCassandraIntegrationTest;
-import org.springframework.data.cassandra.test.integration.repository.User;
+import org.springframework.data.cassandra.test.integration.repository.simple.User;
 
 /**
  * @author Mohsin Husen
  * @author Mark Paluch
  */
-
 public class CdiRepositoryTests extends AbstractEmbeddedCassandraIntegrationTest {
 
 	private static CdiTestContainer cdiContainer;
 	private CdiUserRepository repository;
 	private SamplePersonRepository personRepository;
+	private QualifiedUserRepository qualifiedUserRepository;
 
 	@BeforeClass
 	public static void init() throws Exception {
-		startCassandra();
+		// CDI container is booted before the @Rule can be triggered.
+		// Ensure that we have a usable Cassandra instance otherwise the container won't boot
+		// because it needs a CassandraOperations with a working Session/Cluster
+
 		cdiContainer = CdiTestContainerLoader.getCdiContainer();
 		cdiContainer.startApplicationScope();
+		cdiContainer.startContexts();
 		cdiContainer.bootContainer();
 	}
 
 	@AfterClass
 	public static void shutdown() throws Exception {
+
 		cdiContainer.stopContexts();
 		cdiContainer.shutdownContainer();
 	}
 
 	@Before
 	public void setUp() {
+
 		CdiRepositoryClient client = cdiContainer.getInstance(CdiRepositoryClient.class);
 		repository = client.getRepository();
 		personRepository = client.getSamplePersonRepository();
+		qualifiedUserRepository = client.getQualifiedUserRepository();
 	}
 
+	/**
+	 * @see DATACASS-149
+	 */
 	@Test
 	public void testCdiRepository() {
+
 		assertNotNull(repository);
+
+		repository.deleteAll();
 
 		User bean = new User();
 		bean.setUsername("username");
@@ -87,6 +100,25 @@ public class CdiRepositoryTests extends AbstractEmbeddedCassandraIntegrationTest
 		assertEquals(0, repository.count());
 		retrieved = repository.findOne(bean.getUsername());
 		assertNull(retrieved);
+	}
+
+	/**
+	 * @see DATACASS-249
+	 */
+	@Test
+	public void testQualifiedCdiRepository() {
+
+		assertNotNull(qualifiedUserRepository);
+		qualifiedUserRepository.deleteAll();
+
+		User bean = new User();
+		bean.setUsername("username");
+		bean.setFirstName("first");
+		bean.setLastName("last");
+
+		qualifiedUserRepository.save(bean);
+
+		assertTrue(qualifiedUserRepository.exists(bean.getUsername()));
 	}
 
 	/**

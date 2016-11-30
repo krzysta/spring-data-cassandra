@@ -15,13 +15,7 @@
  */
 package org.springframework.data.cassandra.mapping;
 
-import static org.springframework.cassandra.core.cql.CqlIdentifier.cqlId;
-import static org.springframework.cassandra.core.keyspace.CreateTableSpecification.createTable;
-
-import java.beans.PropertyDescriptor;
-import java.lang.reflect.Field;
-import java.util.*;
-
+import com.datastax.driver.core.TableMetadata;
 import org.springframework.beans.BeansException;
 import org.springframework.cassandra.core.cql.CqlIdentifier;
 import org.springframework.cassandra.core.keyspace.CreateTableSpecification;
@@ -38,12 +32,17 @@ import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 
-import com.datastax.driver.core.TableMetadata;
+import java.beans.PropertyDescriptor;
+import java.lang.reflect.Field;
+import java.util.*;
+
+import static org.springframework.cassandra.core.cql.CqlIdentifier.cqlId;
+import static org.springframework.cassandra.core.keyspace.CreateTableSpecification.createTable;
 
 /**
  * Default implementation of a {@link MappingContext} for Cassandra using {@link CassandraPersistentEntity} and
  * {@link CassandraPersistentProperty} as primary abstractions.
- * 
+ *
  * @author Alex Shvid
  * @author Matthew T. Adams
  */
@@ -123,7 +122,7 @@ public class BasicCassandraMappingContext extends
 		}
 
 		// now do some caching of the entity
-		
+
 		if (entity.isCompositePrimaryKey()) {
 			primaryKeyEntities.add(entity);
 		} else {
@@ -324,7 +323,7 @@ public class BasicCassandraMappingContext extends
 	public void setVerifier(CassandraPersistentEntityMetadataVerifier verifier) {
 		this.verifier = verifier;
 	}
-	
+
 	@Override
 	protected CassandraPersistentEntity<?> addPersistentEntity(TypeInformation<?> typeInformation) {
 	    if (!verifier.isPersistent(typeInformation)) {

@@ -17,4 +17,6 @@
 		<appender-ref ref="console" />
 	</root>
 
+	<!--<logger name="org.apache.cassandra" level="DEBUG"/>-->
+
 </configuration>

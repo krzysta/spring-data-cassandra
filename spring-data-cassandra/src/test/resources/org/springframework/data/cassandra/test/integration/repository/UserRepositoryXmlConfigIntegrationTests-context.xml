@@ -15,7 +15,7 @@
 	<cass:mapping
 		entity-base-packages="org.springframework.data.cassandra.test.integration.repository">
 		<cass:entity
-			class="org.springframework.data.cassandra.test.integration.repository.User">
+			class="org.springframework.data.cassandra.test.integration.repository.simple.User">
 			<cass:table name="users" />
 		</cass:entity>
 	</cass:mapping>

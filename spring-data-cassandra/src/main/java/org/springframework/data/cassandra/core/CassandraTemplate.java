@@ -15,13 +15,15 @@
  */
 package org.springframework.data.cassandra.core;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-
+import com.datastax.driver.core.*;
+import com.datastax.driver.core.exceptions.DriverException;
+import com.datastax.driver.core.querybuilder.*;
+import com.datastax.driver.core.querybuilder.Delete.Where;
+import com.google.common.base.Function;
+import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableListMultimap;
 import org.springframework.cassandra.core.*;
+import org.springframework.cassandra.core.QueryOptions;
 import org.springframework.cassandra.core.cql.CqlIdentifier;
 import org.springframework.cassandra.core.util.CollectionUtils;
 import org.springframework.core.convert.ConversionService;
@@ -40,16 +42,7 @@ import org.springframework.data.mapping.PropertyHandler;
 import org.springframework.data.mapping.model.ConvertingPropertyAccessor;
 import org.springframework.util.Assert;
 
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.ResultSetFuture;
-import com.datastax.driver.core.Row;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.exceptions.DriverException;
-import com.datastax.driver.core.querybuilder.*;
-import com.datastax.driver.core.querybuilder.Delete.Where;
-import com.google.common.base.Function;
-import com.google.common.collect.FluentIterable;
-import com.google.common.collect.ImmutableListMultimap;
+import java.util.*;
 
 /**
  * The CassandraTemplate is a convenient API for all Cassandra operations using POJOs with their Spring Data Cassandra
@@ -373,7 +366,8 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
                             idEntity.doWithProperties(new PropertyHandler<CassandraPersistentProperty>() {
                                     @Override
                                     public void doWithPersistentProperty(CassandraPersistentProperty p) {
-                                        identifiers.add(idWrapper.getProperty(p, p.getDataType().asJavaClass()));
+                                        identifiers.add(idWrapper.getProperty(
+												p, CodecRegistry.DEFAULT_INSTANCE.codecFor(p.getDataType()).getJavaType().getRawType()));
                                     }
                             });
                         }
@@ -458,7 +452,8 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 	}
 
         protected Object convertProperty(Object object, CassandraPersistentProperty prop) {
-            return getConversionService().convert(object, prop.getDataType().asJavaClass());
+            return getConversionService().convert(object,
+					CodecRegistry.DEFAULT_INSTANCE.codecFor(prop.getDataType()).getJavaType().getRawType());
         }
 
 	protected void appendIdCriteria(final com.datastax.driver.core.querybuilder.Select.Where where,
@@ -962,8 +957,8 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 	 * 
 	 * @param tableName
 	 * @param objectToSave
-	 * @param entity
-	 * @param optionsByName
+	 * @param options
+	 * @param entityWriter
 	 * @return The Query object to run with session.execute();
 	 */
 	public static Insert createInsertQuery(String tableName, Object objectToSave, WriteOptions options,
@@ -990,8 +985,8 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 	 * 
 	 * @param tableName
 	 * @param objectToSave
-	 * @param entity
-	 * @param optionsByName
+	 * @param options
+	 * @param entityWriter
 	 * @return The Query object to run with session.execute();
 	 */
 	public static Update createUpdateQuery(String tableName, Object objectToSave, WriteOptions options,
@@ -1018,8 +1013,8 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 	 * 
 	 * @param tableName
 	 * @param objectsToSave
-	 * @param entity
-	 * @param optionsByName
+	 * @param options
+	 * @param entityWriter
 	 * @return The Query object to run with session.execute();
 	 */
 	public static <T> Batch createUpdateBatchQuery(String tableName, List<T> objectsToSave, WriteOptions options,
@@ -1041,8 +1036,8 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 	 * 
 	 * @param tableName
 	 * @param entities
-	 * @param entity
-	 * @param optionsByName
+	 * @param options
+	 * @param entityWriter
 	 * @return The Query object to run with session.execute();
 	 */
 	public static <T> Batch createInsertBatchQuery(String tableName, List<T> entities, WriteOptions options,
@@ -1064,8 +1059,8 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 	 * 
 	 * @param tableName
 	 * @param object
-	 * @param entity
-	 * @param optionsByName
+	 * @param options
+	 * @param entityWriter
 	 * @return
 	 */
 	public static Delete createDeleteQuery(String tableName, Object object, QueryOptions options,
@@ -1084,8 +1079,8 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 	 * 
 	 * @param tableName
 	 * @param entities
-	 * @param entity
-	 * @param optionsByName
+	 * @param options
+	 * @param entityWriter
 	 * @return
 	 */
 	public static <T> Batch createDeleteBatchQuery(String tableName, List<T> entities, QueryOptions options,
