@@ -161,16 +161,16 @@ public class CassandraMappingBeanFactoryPostProcessor implements BeanFactoryPost
 		return contextBean;
 	}
 
-	private BeanDefinitionHolder registerDefaultConverter(BeanDefinitionRegistry registry, String contextBeanName) {
+	public BeanDefinitionHolder registerDefaultConverter(BeanDefinitionRegistry registry, String contextBeanName, String cnvServiceBeanName) {
 
-		BeanDefinition beanDefinition = BeanDefinitionBuilder //
-				.genericBeanDefinition(MappingCassandraConverter.class) //
-				.addConstructorArgReference(contextBeanName).getBeanDefinition();
+		BeanDefinitionBuilder converterBeanDefinitionBuilder = BeanDefinitionBuilder.genericBeanDefinition(
+				MappingCassandraConverter.class).addConstructorArgReference(cnvServiceBeanName).addConstructorArgReference(contextBeanName);
+		BeanDefinitionHolder beanDefinition = new BeanDefinitionHolder(converterBeanDefinitionBuilder.getBeanDefinition(),
+				DefaultBeanNames.CONVERTER);
 
-		BeanDefinitionHolder converter = new BeanDefinitionHolder(beanDefinition, DefaultBeanNames.CONVERTER);
-		registry.registerBeanDefinition(converter.getBeanName(), converter.getBeanDefinition());
+		registry.registerBeanDefinition(beanDefinition.getBeanName(), beanDefinition.getBeanDefinition());
 
-		return converter;
+		return beanDefinition;
 	}
 
 	private BeanDefinitionHolder registerDefaultTemplate(BeanDefinitionRegistry registry, String sessionBeanName,

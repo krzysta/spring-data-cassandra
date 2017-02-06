@@ -753,6 +753,13 @@ The comma-delimited base packages in which to scan for entities and their mappin
 					]]></xsd:documentation>
 				</xsd:annotation>
 			</xsd:attribute>
+			<xsd:attribute name="id" type="xsd:ID" use="optional">
+				<xsd:annotation>
+					<xsd:documentation><![CDATA[
+The name of the mapping; default is "cassandraMapping".
+				]]></xsd:documentation>
+				</xsd:annotation>
+			</xsd:attribute>
 		</xsd:complexType>
 	</xsd:element>
 
@@ -783,6 +790,13 @@ The reference to a ConversionService. Will default to 'conversionService'.
 						source="org.springframework.data.cassandra.mapping.CassandraMappingContext"><![CDATA[
 The reference to a CassandraMappingContext. Will default to 'cassandraMapping'.
 					]]></xsd:documentation>
+				</xsd:annotation>
+			</xsd:attribute>
+			<xsd:attribute name="id" type="xsd:ID" use="optional">
+				<xsd:annotation>
+					<xsd:documentation><![CDATA[
+The name of the mapping; default is "cassandraConverter".
+				]]></xsd:documentation>
 				</xsd:annotation>
 			</xsd:attribute>
 		</xsd:complexType>

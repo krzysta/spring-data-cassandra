@@ -6,6 +6,8 @@
 
 		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
 
+	<bean id="conversionService" class="org.springframework.data.cassandra.test.integration.repository.ConversionServiceFactoryBean"/>
+
 	<bean class="org.springframework.data.cassandra.config.CassandraMappingBeanFactoryPostProcessorTests.MockSessionFactory"/>
 	<cass:mapping/>
 	<cass:converter/>
