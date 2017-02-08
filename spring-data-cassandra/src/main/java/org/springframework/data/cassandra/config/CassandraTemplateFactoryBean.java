@@ -42,7 +42,7 @@ public class CassandraTemplateFactoryBean implements FactoryBean<CassandraOperat
 
 	@Override
 	public Class<?> getObjectType() {
-		return CassandraOperations.class;
+		return CassandraTemplate.class;
 	}
 
 	@Override
