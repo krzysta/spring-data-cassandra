@@ -27,6 +27,7 @@ import java.util.TreeSet;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cassandra.core.QueryOptions;
 import org.springframework.cassandra.core.converter.ResultSetToBigDecimalConverter;
 import org.springframework.cassandra.core.converter.ResultSetToBigIntegerConverter;
 import org.springframework.cassandra.core.converter.ResultSetToBooleanConverter;
@@ -120,8 +121,9 @@ public abstract class AbstractCassandraQuery implements RepositoryQuery {
 		CassandraParameterAccessor accessor = new CassandraParametersParameterAccessor(method, parameters);
 		
 		String query = createQuery(accessor, template.getConverter());
+		QueryOptions queryOptions = getQueryOptions();
 
-		ResultSet resultSet = template.query(query);
+		ResultSet resultSet = template.query(query, queryOptions);
 
 		// return raw result set if requested
 		if (method.isResultSetQuery()) {
@@ -162,6 +164,10 @@ public abstract class AbstractCassandraQuery implements RepositoryQuery {
 		// if we get this far, let the configured conversion service try to convert the result set
 		return conversionService.convert(retval, TypeDescriptor.forObject(retval),
 				TypeDescriptor.valueOf(declaredReturnType));
+	}
+
+	public QueryOptions getQueryOptions() {
+		return null;
 	}
 
 	public Object getCollectionOfEntity(ResultSet resultSet, Class<?> declaredReturnType,

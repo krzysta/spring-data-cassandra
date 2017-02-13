@@ -25,6 +25,7 @@ import java.lang.annotation.Target;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.context.annotation.ComponentScan.Filter;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.cassandra.config.DefaultBeanNames;
 import org.springframework.data.cassandra.core.CassandraTemplate;
 import org.springframework.data.cassandra.repository.support.CassandraRepositoryFactoryBean;
 import org.springframework.data.repository.config.DefaultRepositoryBaseClass;
@@ -123,7 +124,7 @@ public @interface EnableCassandraRepositories {
 	 * 
 	 * @return
 	 */
-	String cassandraTemplateRef() default "cassandraTemplate";
+	String cassandraTemplateRef() default DefaultBeanNames.DATA_TEMPLATE;
 
 	/**
 	 * Configures whether nested repository-interfaces (e.g. defined as inner classes) should be discovered by the
