@@ -322,6 +322,7 @@
 					<useFile>false</useFile>
 					<includes>
 						<include>**/test/integration/**/*.java</include>
+						<include>**/config/*Tests.java</include>
 					</includes>
 					<excludes>
 						<exclude>**/test/unit/**/*.java</exclude>

@@ -42,7 +42,7 @@ public class CassandraTemplateParser extends CassandraCqlTemplateParser {
 			throws BeanDefinitionStoreException {
 
 		String id = super.resolveId(element, definition, parserContext);
-		return StringUtils.hasText(id) ? id : DefaultBeanNames.DATA_TEMPLATE;
+		return StringUtils.hasText(id) && !DefaultBeanNames.TEMPLATE.equals(id) ? id : DefaultBeanNames.DATA_TEMPLATE;
 	}
 
 	@Override

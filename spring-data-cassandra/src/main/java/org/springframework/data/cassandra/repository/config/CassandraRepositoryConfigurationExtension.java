@@ -60,7 +60,7 @@ public class CassandraRepositoryConfigurationExtension extends RepositoryConfigu
 		Element element = config.getElement();
 
 		ParsingUtils.addOptionalPropertyReference(builder, "cassandraTemplate", element, CASSANDRA_TEMPLATE_REF,
-				DefaultBeanNames.TEMPLATE);
+				DefaultBeanNames.DATA_TEMPLATE);
 	}
 
 	@Override
