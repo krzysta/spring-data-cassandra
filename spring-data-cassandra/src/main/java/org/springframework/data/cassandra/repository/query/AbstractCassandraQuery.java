@@ -121,7 +121,7 @@ public abstract class AbstractCassandraQuery implements RepositoryQuery {
 		CassandraParameterAccessor accessor = new CassandraParametersParameterAccessor(method, parameters);
 		
 		String query = createQuery(accessor, template.getConverter());
-		QueryOptions queryOptions = getQueryOptions();
+		QueryOptions queryOptions = getQueryOptions(accessor);
 
 		ResultSet resultSet = template.query(query, queryOptions);
 
@@ -166,7 +166,7 @@ public abstract class AbstractCassandraQuery implements RepositoryQuery {
 				TypeDescriptor.valueOf(declaredReturnType));
 	}
 
-	public QueryOptions getQueryOptions() {
+	public QueryOptions getQueryOptions(CassandraParameterAccessor accessor) {
 		return null;
 	}
 
