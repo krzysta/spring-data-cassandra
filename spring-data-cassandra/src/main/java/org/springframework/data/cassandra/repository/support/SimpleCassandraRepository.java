@@ -19,6 +19,7 @@ import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.cassandra.core.LTWTxQueryOptions;
 import org.springframework.cassandra.core.WriteOptions;
 import org.springframework.cassandra.core.util.CollectionUtils;
 import org.springframework.data.cassandra.core.CassandraOperations;
@@ -32,7 +33,7 @@ import com.datastax.driver.core.querybuilder.Select;
 
 /**
  * Repository base implementation for Cassandra.
- * 
+ *
  * @author Alex Shvid
  * @author Matthew T. Adams
  */
@@ -44,7 +45,7 @@ public class SimpleCassandraRepository<T, ID extends Serializable> implements Ty
 	/**
 	 * Creates a new {@link SimpleCassandraRepository} for the given {@link CassandraEntityInformation} and
 	 * {@link CassandraTemplate}.
-	 * 
+	 *
 	 * @param metadata must not be {@literal null}.
 	 * @param operations must not be {@literal null}.
 	 */
@@ -61,31 +62,31 @@ public class SimpleCassandraRepository<T, ID extends Serializable> implements Ty
 	public <S extends T> S save(S entity) {
 		return operations.insert(entity);
 	}
-	
+
 	@Override
     public <S extends T> S save(S entity, WriteOptions writeOptions) {
         return operations.insert(entity, writeOptions);
     }
 
-    @Override
-    public <S extends T> LTWTxResult<S>  updateIf(S entity, Map<String, Object> updateConditions) {
-        return operations.updateIf(entity, updateConditions);
-    }
-    
-    @Override
-    public <S extends T> LTWTxResult<S>  updateIf(S entity, Map<String, Object> updateConditions, WriteOptions writeOptions) {
-        return operations.updateIf(entity, updateConditions, writeOptions);
-    }
+	@Override
+	public <S extends T> LTWTxResult<S>  updateIf(S entity, Map<String, Object> updateConditions) {
+		return operations.updateIf(entity, updateConditions);
+	}
 
 	@Override
-    public <S extends T> LTWTxResult<S> saveIfNotExists(S entity) {
-        return operations.insertIfNotExists(entity, null);
-    }
-	
-    @Override
-    public <S extends T> LTWTxResult<S> saveIfNotExists(S entity, WriteOptions writeOptions) {
-        return operations.insertIfNotExists(entity, writeOptions);
-    }
+	public <S extends T> LTWTxResult<S>  updateIf(S entity, Map<String, Object> updateConditions, LTWTxQueryOptions ltwTxQueryOptions) {
+		return operations.updateIf(entity, updateConditions, ltwTxQueryOptions);
+	}
+
+	@Override
+	public <S extends T> LTWTxResult<S> saveIfNotExists(S entity) {
+		return operations.insertIfNotExists(entity, null);
+	}
+
+	@Override
+	public <S extends T> LTWTxResult<S> saveIfNotExists(S entity, LTWTxQueryOptions ltwTxQueryOptions) {
+		return operations.insertIfNotExists(entity, ltwTxQueryOptions);
+	}
 
 	@Override
 	public <S extends T> List<S> save(Iterable<S> entities) {

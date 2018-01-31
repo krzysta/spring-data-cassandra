@@ -44,10 +44,12 @@ import org.springframework.util.Assert;
 
 import java.util.*;
 
+import static org.springframework.cassandra.core.ConsistencyLevelResolver.resolve;
+
 /**
  * The CassandraTemplate is a convenient API for all Cassandra operations using POJOs with their Spring Data Cassandra
  * mapping information. For low-level Cassandra operation, see {@link CqlTemplate}.
- * 
+ *
  * @author Alex Shvid
  * @author David Webb
  * @author Matthew T. Adams
@@ -70,7 +72,7 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 
 	/**
 	 * Constructor if only session and converter are known at time of Template Creation
-	 * 
+	 *
 	 * @param session must not be {@literal null}
 	 * @param converter must not be {@literal null}.
 	 */
@@ -232,15 +234,15 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 	}
 
     @Override
-    public <T> LTWTxResult<T> insertIfNotExists(T entity, WriteOptions options) {
+    public <T> LTWTxResult<T> insertIfNotExists(T entity, LTWTxQueryOptions options) {
         return doInsertIfNotExists(entity, options);
     }
 
     @Override
-    public <T> LTWTxResult<T> updateIf(T entity, Map<String, Object> updateConditions, WriteOptions options) {
+    public <T> LTWTxResult<T> updateIf(T entity, Map<String, Object> updateConditions, LTWTxQueryOptions options) {
         return doUpdateIf(entity, updateConditions, options);
     }
-    
+
     @Override
     public <T> LTWTxResult<T> updateIf(T entity, Map<String, Object> updateConditions) {
         return updateIf(entity, updateConditions, null);
@@ -356,11 +358,11 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 
 		Select select = QueryBuilder.select().all().from(entity.getTableName().toCql());
                 final List<Object> identifiers = new ArrayList<Object>();
-                
+
                 if (idProperty.isCompositePrimaryKey()) {
-                
+
                         CassandraPersistentEntity<?> idEntity = idProperty.getCompositePrimaryKeyEntity();
-                        
+
                         for(Object id : ids) {
                             final ConvertingPropertyAccessor idWrapper = getWrapper(id, idEntity);
                             idEntity.doWithProperties(new PropertyHandler<CassandraPersistentProperty>() {
@@ -376,8 +378,8 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
                         identifiers.add(convertProperty(id, idProperty));
                     }
                 }
-                
-		select.where(QueryBuilder.in(entity.getIdProperty().getColumnName().toCql(), 
+
+		select.where(QueryBuilder.in(entity.getIdProperty().getColumnName().toCql(),
 		        CollectionUtils.toArray(identifiers)));
 
 		return select(select, type);
@@ -425,7 +427,7 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 		CassandraPersistentProperty idProperty = entity.getIdProperty();
 
 		Assert.notNull(idProperty, "id property not found for "+entity);
-		
+
 		if (idProperty.isCompositePrimaryKey()) {
 
 			CassandraPersistentEntity<?> idEntity = idProperty.getCompositePrimaryKeyEntity();
@@ -444,8 +446,8 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 			});
 
 		} else {
-		    
-                    clauseCallback.doWithClause(QueryBuilder.eq(idProperty.getColumnName().toCql(), 
+
+                    clauseCallback.doWithClause(QueryBuilder.eq(idProperty.getColumnName().toCql(),
                             convertProperty(id, idProperty)));
 		}
 
@@ -704,47 +706,53 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 		return entity;
 	}
 
-    protected <T> LTWTxResult<T> doInsertIfNotExists(final T obj, WriteOptions options) {
-        Assert.notNull(obj);
-        Insert insert = createInsertQuery(getTableName(obj).toCql(), obj, options, cassandraConverter);
-        insert.ifNotExists();
-        return ltwTxResult(obj, execute(insert));
-                
-    }
+	protected <T> LTWTxResult<T> doInsertIfNotExists(final T obj, LTWTxQueryOptions options) {
+		Assert.notNull(obj);
+		Insert insert = createInsertQuery(getTableName(obj).toCql(), obj, options, cassandraConverter);
+		if(options.getSerialConsistencyLevel() != null) {
+			insert.setSerialConsistencyLevel(resolve(options.getSerialConsistencyLevel()));
+		}
+		insert.ifNotExists();
+		return ltwTxResult(obj, execute(insert));
 
-    private <T> LTWTxResult<T> ltwTxResult(final T obj, ResultSet resultSet) {
-        if (resultSet.wasApplied()) {
-            return LTWTxResult.ok();
-        } else {
-            T offending = processOne(resultSet, new RowMapper<T>() {
-                
-                @Override
-                public T mapRow(Row row, int rowNum) throws DriverException {
-                    return (T) cassandraConverter.read(obj.getClass(), row);
-                }
-            });
-            return LTWTxResult.offending(offending);
-        }
-    }
-    
+	}
 
-    protected <T> LTWTxResult<T> doUpdateIf(T object, Map<String, Object> updateConditions, WriteOptions options) {
+	private <T> LTWTxResult<T> ltwTxResult(final T obj, ResultSet resultSet) {
+		if (resultSet.wasApplied()) {
+			return LTWTxResult.ok();
+		} else {
+			T offending = processOne(resultSet, new RowMapper<T>() {
 
-        Assert.notNull(object);
-        Update update = createUpdateQuery(getTableName(object).toCql(), object, options, cassandraConverter);
-        
-        @SuppressWarnings("unchecked")
-        CassandraPersistentEntity<T> entity = (CassandraPersistentEntity<T>) getEntity(object.getClass());
-        for(Map.Entry<String, Object> entry :  updateConditions.entrySet()) {
-            CassandraPersistentProperty persistentProperty = entity.getPersistentProperty(entry.getKey());
-            if (persistentProperty == null) {
-                throw new IllegalArgumentException("Property "+entry.getKey()+" not found on "+entity.getName());
-            }
-            update.onlyIf(QueryBuilder.eq(persistentProperty.getColumnName().toCql(), entry.getValue()));
-        }
-        
-        return ltwTxResult(object, execute(update));
-    }
+				@Override
+				public T mapRow(Row row, int rowNum) throws DriverException {
+					return (T) cassandraConverter.read(obj.getClass(), row);
+				}
+			});
+			return LTWTxResult.offending(offending);
+		}
+	}
+
+
+	protected <T> LTWTxResult<T> doUpdateIf(T object, Map<String, Object> updateConditions, LTWTxQueryOptions options) {
+
+		Assert.notNull(object);
+		Update update = createUpdateQuery(getTableName(object).toCql(), object, options, cassandraConverter);
+		if(options.getSerialConsistencyLevel() != null) {
+			update.setSerialConsistencyLevel(resolve(options.getSerialConsistencyLevel()));
+		}
+
+		@SuppressWarnings("unchecked")
+		CassandraPersistentEntity<T> entity = (CassandraPersistentEntity<T>) getEntity(object.getClass());
+		for(Map.Entry<String, Object> entry :  updateConditions.entrySet()) {
+			CassandraPersistentProperty persistentProperty = entity.getPersistentProperty(entry.getKey());
+			if (persistentProperty == null) {
+				throw new IllegalArgumentException("Property "+entry.getKey()+" not found on "+entity.getName());
+			}
+			update.onlyIf(QueryBuilder.eq(persistentProperty.getColumnName().toCql(), entry.getValue()));
+		}
+
+		return ltwTxResult(object, execute(update));
+	}
 
 
 	protected <T> Cancellable doInsertAsync(final T entity, final WriteListener<T> listener, WriteOptions options) {
@@ -819,7 +827,7 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 
 	/**
 	 * Asynchronously performs a batch insert or update.
-	 * 
+	 *
 	 * @param entities The entities to insert or update.
 	 * @param listener The listener that will receive notification of the completion of the batch insert or update. May be
 	 *          <code>null</code>.
@@ -833,7 +841,7 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 
 	/**
 	 * Asynchronously performs a batch insert or update.
-	 * 
+	 *
 	 * @param entities The entities to insert or update.
 	 * @param listener The listener that will receive notification of the completion of the batch insert or update. May be
 	 *          <code>null</code>.
@@ -847,7 +855,7 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 
 	/**
 	 * Asynchronously performs a batch insert or update.
-	 * 
+	 *
 	 * @param entities The entities to insert or update.
 	 * @param listener The listener that will receive notification of the completion of the batch insert or update. May be
 	 *          <code>null</code>.
@@ -954,7 +962,7 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 
 	/**
 	 * Generates a Query Object for an insert
-	 * 
+	 *
 	 * @param tableName
 	 * @param objectToSave
 	 * @param options
@@ -982,7 +990,7 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 
 	/**
 	 * Generates a Query Object for an Update
-	 * 
+	 *
 	 * @param tableName
 	 * @param objectToSave
 	 * @param options
@@ -1010,7 +1018,7 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 
 	/**
 	 * Generates a Batch Object for multiple Updates
-	 * 
+	 *
 	 * @param tableName
 	 * @param objectsToSave
 	 * @param options
@@ -1033,7 +1041,7 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 
 	/**
 	 * Generates a Batch Object for multiple inserts
-	 * 
+	 *
 	 * @param tableName
 	 * @param entities
 	 * @param options
@@ -1056,7 +1064,7 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 
 	/**
 	 * Create a Delete Query Object from an annotated POJO
-	 * 
+	 *
 	 * @param tableName
 	 * @param object
 	 * @param options
@@ -1076,7 +1084,7 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 
 	/**
 	 * Create a Batch Query object for multiple deletes.
-	 * 
+	 *
 	 * @param tableName
 	 * @param entities
 	 * @param options
@@ -1167,7 +1175,7 @@ public class CassandraTemplate extends CqlTemplate implements CassandraOperation
 		throw new IllegalArgumentException(
 				String.format("Expected type String or Select; got type [%s] with value [%s]", query.getClass(), query));
 	}
-	
+
 
         protected ConvertingPropertyAccessor getWrapper(Object object, CassandraPersistentEntity<?> entity) {
                 if (object instanceof ConvertingPropertyAccessor) {
