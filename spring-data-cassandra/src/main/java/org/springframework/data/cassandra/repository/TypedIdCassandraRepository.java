@@ -65,21 +65,21 @@ import org.springframework.data.repository.NoRepositoryBean;
  * construct an id.</li>
  * </ul>
  * </ul>
- *
+ * 
  * @author Alex Shvid
  * @author Matthew T. Adams
  */
 @NoRepositoryBean
 public interface TypedIdCassandraRepository<T, ID extends Serializable> extends CrudRepository<T, ID> {
-
+    
     <S extends T> LTWTxResult<S> saveIfNotExists(S obj);
-
+    
     <S extends T> LTWTxResult<S> saveIfNotExists(S obj, LTWTxQueryOptions ltwTxQueryOptions);
 
     <S extends T> S save(S obj, WriteOptions writeOptions);
 
     <S extends T> LTWTxResult<S> updateIf(S ent, Map<String, Object> updateConditions);
-
+    
     <S extends T> LTWTxResult<S> updateIf(S ent, Map<String, Object> updateConditions, LTWTxQueryOptions ltwTxQueryOptions);
-
+    
 }
